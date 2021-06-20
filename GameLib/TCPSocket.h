@@ -13,21 +13,21 @@
 #include <random>
 #include <vector>
 #include <numeric>
-class UDPSocket
+class TCPSocket
 {
-	sf::UdpSocket* udpSocket;
+	sf::TcpSocket* tcpSocket;
 	
 public:
-	sf::Socket::Status udpStatus;
-	UDPSocket();
-	UDPSocket(sf::UdpSocket* _udpSocket);
-	~UDPSocket();
+	sf::Socket::Status tcpStatus;
+	TCPSocket();
+	TCPSocket(sf::TcpSocket* _udpSocket);
+	~TCPSocket();
 
 	unsigned short GetLocalPort();
 	void unBind();
-	sf::Socket::Status Receive(sf::Packet&, sf::IpAddress&, unsigned short&);
-	sf::Socket::Status Send(sf::Packet, sf::IpAddress, unsigned short);
-	sf::Socket::Status Bind(unsigned short);
+	//sf::Socket::Status Receive(sf::Packet&, sf::IpAddress&, unsigned short&);
+	//sf::Socket::Status Send(sf::Packet, sf::IpAddress, unsigned short);
+	//sf::Socket::Status Bind(unsigned short);
 	
 
 };
