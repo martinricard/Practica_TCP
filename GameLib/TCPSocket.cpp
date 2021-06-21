@@ -12,35 +12,48 @@ TCPSocket::TCPSocket(sf::TcpSocket* _tcpSocket)
 
 TCPSocket::~TCPSocket()
 {
+    delete[] this->tcpSocket;
 }
 
-unsigned short TCPSocket::GetLocalPort()
+sf::TcpSocket* TCPSocket::GetSocket()
 {
-    return 50000;
+    return tcpSocket;
 }
 
+void TCPSocket::SetSocket(sf::TcpSocket* _tcpSocket) {
+    tcpSocket = _tcpSocket;
+}
 
+sf::IpAddress TCPSocket::GetRemoteIp() 
+{
+    return tcpSocket->getRemoteAddress();
+}
 
-void TCPSocket::unBind()
+std::string TCPSocket::GetRemoteAddress()
+{
+    return tcpSocket->getRemoteAddress().toString();
+}
+
+unsigned short TCPSocket::GetRemotePort() {
+    return tcpSocket->getLocalPort();
+}
+
+sf::Socket::Status TCPSocket::Connect(const std::string localhost, unsigned short port, sf::Time sec) {
+    return tcpSocket->connect(localhost, port, sec);
+}
+void TCPSocket::Disconnect()
 {
     tcpSocket->disconnect();
 }
 
-//sf::Socket::Status TCPSocket::Receive(sf::Packet& pack, sf::IpAddress& ip, unsigned short& port)
-//{
-//    this->tcpStatus = tcpSocket->receive(pack, ip, port);
-//    return tcpStatus;
-//}
-//
-//sf::Socket::Status TCPSocket::Send(sf::Packet pack, sf::IpAddress ip, unsigned short port)
-//{
-//    this->tcpStatus = tcpSocket->send(pack, ip, port);
-//    return tcpStatus;
-//}
-//
-//sf::Socket::Status TCPSocket::Bind(unsigned short port)
-//{
-//    this->tcpStatus = tcpSocket->bind(port);
-//    return tcpStatus;
-//}
-//
+sf::Socket::Status TCPSocket::Receive(sf::Packet& pack)
+{
+  
+    return tcpSocket->receive(pack);
+}
+
+sf::Socket::Status TCPSocket::Send(sf::Packet pack)
+{
+    return tcpSocket->send(pack);
+}
+

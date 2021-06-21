@@ -9,15 +9,6 @@ Client::Client()
 Client::~Client()
 {
 }
-//Se introduce el username del cliente
-void Client::Username() {
-	LineCout();
-
-	std::cout <<std::endl<< "                           CLIENT                         " << std::endl;
-	LineCout();
-	std::cout << "Introduce your username: ";
-	std::cin >> username;
-}
 //Se une a la partida si escribe y, sino se cierra la consola
 void Client::JoinGame() {
 	std::string confirmation;
@@ -52,36 +43,6 @@ static float GetRandomFloat() {
 
 
 
-
-//Aqui sera donde reciba todos los paquetes y los maneje dependiendo de su tag
-void Client::RecievingThread() {//Escucha los paquetes que envia el servidor
-	sf::Packet packet;
-	sf::IpAddress ip;
-	unsigned short port;
-	std::string message;
-	int recieverInt;
-
-	while (true)
-	{
-		//Tenemos un porcentaje de perdida para los paquetes
-		//tcpSocket->tcpStatus = tcpSocket->Receive(packet, ip, port);
-		packet >> recieverInt;
-		if (tcpSocket->tcpStatus == sf::Socket::Done) {
-			switch (recieverInt) {
-
-
-			}
-		}
-
-
-
-		else {
-			std::cout << "Se ha perdido el paquete";
-		}
-
-	}
-}
-		
 		
 
 void Client::SendingThread() {//Envia los paquetes
@@ -111,24 +72,129 @@ void Client::SendingThread() {//Envia los paquetes
 	
 	}
 }
+void Client::RecievingThread() {
+	//sf::TcpListener listener;
+	////sf::Socket::Status status = listener.listen(tcpSocket->GetLocalPort());
+	//// Create a selector
+	//sf::SocketSelector *selector;
+	//// Add the listener to the selector
+	//if (status != sf::Socket::Done)
+	//{
+	//	std::cout << "Error al abrir listener\n";
+	//	exit(0);
+	//}
+	//else {
+	//	//selector->add(listener);
+	//}
+
+
+
+}
+
+void Client::ListenerConnection() {
+	sf::TcpListener listenerConnection;
+	//sf::Socket::Status status = listenerConnection.listen(tcpSocket->GetLocalPort());
+	sf::Socket::Status status = listenerConnection.listen(50000);
+	if (status != sf::Socket::Done)
+	{
+		std::cout << "Error al abrir listener\n";
+		exit(0);
+	}
+
+	// Create a selector
+	sf::SocketSelector selector;
+	// Add the listener to the selector
+	selector.add(listenerConnection);
+	// Endless loop that waits for new connections
+	while (!false)
+	{
+		// Make the selector wait for data on any socket
+		if (selector.wait())
+		{
+			
+				sf::Packet packet;
+				// The listener is ready: there is a pending connection
+				TCPSocket* client = new TCPSocket;
+				status = client->Receive(packet);
+				packet >> enumListener;
+					int numOfPlayers;
+					packet >> numOfPlayers;
+					unsigned short port;
+					if (enumListener == LISTENER::CONEXION_NUEVO_PLAYER) {
+						for (int i = 0;i < numOfPlayers;i++) {
+							packet >> port;
+							tcpSocket->Connect("localhost", port, sf::milliseconds(15.f));
+							clients.push_back(client);
+						}
+					}
+
+				}
+			}
+		}
+	}
+
+
+}
 
 void Client::ClientLoop()
 {
 
-	Username();
-	JoinGame();
-
-	std::thread tRecieve(&Client::RecievingThread, this);
-	tRecieve.detach();
-	std::thread tSend(&Client::SendingThread, this);
-	tSend.detach();
-	
-	
-	while (true)
+	TCPSocket socket;
+	sf::Socket::Status status = socket.Connect("localhost", 50000, sf::milliseconds(15.f));
+	if (status != sf::Socket::Done)
 	{
-	if (protocolConnected) {
-		
+		std::cout << "Error al establecer conexion\n";
+		exit(0);
+	}
+	else
+	{
+		std::cout << "Se ha establecido conexion\n";
+		ListenerConnection();
+
+
+
+	}
+	std::string str = "hola";
+	std::string userName;
+	if (firstTime) {
+		std::cout << "Elige un userName: ";
+		std::cin >> userName;
+		std::cout << std::endl;
+		//std::getline(std::cin, userName);
+		userName = "u:" + userName;
+
+		sf::Packet packet;
+		packet << userName;
+		status = socket.Send(packet);
+		if (status != sf::Socket::Done)
+		{
+			std::cout << "Error al enviar userName\n";
+		}
+		else {
 		
 		}
+		std::cout << std::endl;
+
+
+		firstTime = false;
 	}
+
+	do
+	{
+		std::cout << "Escribe ... ";
+		std::cin >> str;
+		//std::getline(std::cin, str);
+
+
+		sf::Packet packet;
+		packet << str;
+		status = socket.Send(packet);
+		if (status != sf::Socket::Done)
+		{
+			std::cout << "Error al enviar\n";
+		}
+		std::cout << std::endl;
+	} while (str != "exit");
+	socket.Disconnect();
+
 }

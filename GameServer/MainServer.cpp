@@ -7,7 +7,7 @@ int main()
 
 	Server servidor;
 	
-	servidor.ServerLoop();
+	servidor.ControlServidor();
 
 	return 0;
 

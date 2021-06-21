@@ -6,9 +6,10 @@ struct Client
 {
 	TCPSocket* tcpSocket;
 	bool protocolConnected;
-	std::mutex clientMtx;
-	std::string username;
-
+	std::string userName;
+	bool firstTime = true;
+	int enumListener;
+	std::list<TCPSocket*> clients;
 
 public:
 	
@@ -22,6 +23,8 @@ public:
 
 	void RecievingThread();
 	void SendingThread();
+
+	void ListenerConnection();
 
 	void ClientLoop();
 

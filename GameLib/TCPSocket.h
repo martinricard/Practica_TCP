@@ -16,18 +16,34 @@
 class TCPSocket
 {
 	sf::TcpSocket* tcpSocket;
-	
+	int id;
 public:
 	sf::Socket::Status tcpStatus;
 	TCPSocket();
-	TCPSocket(sf::TcpSocket* _udpSocket);
+	TCPSocket(sf::TcpSocket* _tcpSocket);
 	~TCPSocket();
 
+	sf::TcpSocket* GetSocket();
+
+	void SetSocket(sf::TcpSocket*);
+
+	sf::IpAddress GetRemoteIp();
+
+	
+	std::string GetRemoteAddress();
+
+	unsigned short GetRemotePort();
+
+	sf::Socket::Status Connect(const std::string localhost, unsigned short port, sf::Time sec);
+
+	void Disconnect();
+
 	unsigned short GetLocalPort();
-	void unBind();
-	//sf::Socket::Status Receive(sf::Packet&, sf::IpAddress&, unsigned short&);
-	//sf::Socket::Status Send(sf::Packet, sf::IpAddress, unsigned short);
-	//sf::Socket::Status Bind(unsigned short);
+
+	sf::Socket::Status Receive(sf::Packet& pack);
+
+	sf::Socket::Status Send(sf::Packet pack);
+
 	
 
 };

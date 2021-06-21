@@ -1,6 +1,5 @@
 #pragma once
 #include "../GameLib/TCPSocket.h"
-#include "../GameLib/PlayerInfo.h"
 class Server
 {
 	TCPSocket* tcpSocket;
@@ -10,16 +9,19 @@ class Server
 	sf::SocketSelector selector;
 
 
-	std::list<sf::TcpSocket*> clients;
-	std::map<short, PlayerInfo*> ourClients;
+	// Create a list to store the future clients
+	std::list<TCPSocket*> clients;
+	//std::map<short, Client*> ourClients;
+
+
 public:
 	
 	
 	Server();
 	~Server();
+	void ControlServidor();
 	bool IsClientInMap(unsigned short checkPort);
 	
-	void ServerLoop();
 
 };
 
