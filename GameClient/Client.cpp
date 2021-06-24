@@ -131,10 +131,10 @@ void Client::ListenerConnection() {
 				}
 			}
 		}
-	}
+	
 
 
-}
+
 
 void Client::ClientLoop()
 {
@@ -149,7 +149,6 @@ void Client::ClientLoop()
 	else
 	{
 		std::cout << "Se ha establecido conexion\n";
-		ListenerConnection();
 
 
 
@@ -181,6 +180,8 @@ void Client::ClientLoop()
 
 	do
 	{
+		ListenerConnection();
+
 		std::cout << "Escribe ... ";
 		std::cin >> str;
 		//std::getline(std::cin, str);

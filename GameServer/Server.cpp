@@ -14,58 +14,57 @@ Server::~Server()
 
 
 
+void Server::SendClients(TCPSocket& socket) {
+	sf::Packet packet;
+	packet << LISTENER::CONEXION_NUEVO_PLAYER;
+	packet << clients.size();
+	for (auto it : clients) {
+		packet << it->GetRemotePort();
+	}
 
+	status->SetStatus(socket.Send(packet));
+	if (status->GetStatus() == sf::Socket::Done) {
+		std::cout << "El paquete de enviar clientes se ha enviado correctamente"<<std::endl;
+		packet.clear();
+	}
+	else {
+		std::cout << "El paquete de enviar clientes no se ha enviado correctamente" << std::endl;
+	}
+}
 
 //Server Loop
 void Server::ControlServidor()
 {
 	bool running = true;
 	// Create a socket to listen to new connections
-	sf::TcpListener listener;
-	sf::Socket::Status status = listener.listen(50000);
-	if (status != sf::Socket::Done)
+	status->SetStatus(listener->Listen(50000, sf::IpAddress::LocalHost));
+	if (status->GetStatus() != sf::Socket::Done)
 	{
 		std::cout << "Error al abrir listener\n";
 		exit(0);
 	}
 
-	// Create a selector
-	sf::SocketSelector selector;
 	// Add the listener to the selector
-	selector.add(listener);
+	selector->Add(&listener->GetListener());
 	// Endless loop that waits for new connections
 	while (running)
 	{
 		// Make the selector wait for data on any socket
-		if (selector.wait())
+		if (selector->Wait())
 		{
 			// Test the listener
-			if (selector.isReady(listener))
+			if (selector->isReady(&listener->GetListener()))
 			{
 				// The listener is ready: there is a pending connection
 				TCPSocket* client = new TCPSocket;
 
-				if (listener.accept(*client->GetSocket()) == sf::Socket::Done)
+				if (listener->Accept(client->GetSocket()) == sf::Socket::Done)
 				{
-					if (clients.size() >= 1) {//si hay mas conectarse
-						// Add the new client to the clients list
-						std::cout << "Llega el cliente con puerto: " << client->GetRemotePort() << std::endl;
-						std::cout << "El cliente con puerto: " << client->GetRemotePort() << " queda a la espera junto con " << clients.size() << " clientes mas" << std::endl;
+					std::cout << "Llega el cliente con puerto: " << client->GetRemotePort() << std::endl;
+					std::cout << "El cliente con puerto: " << client->GetRemotePort() << " queda a la espera junto con " << clients.size() << " clientes mas" << std::endl;
+					SendClients(*client);
+					selector->Add(client->GetSocket());
 
-						//conectar este client con los que ya hay por TCP
-						std::list<TCPSocket*>::iterator it = clients.begin();
-						sf::Packet packet;
-						packet << LISTENER::CONEXION_NUEVO_PLAYER;
-						packet << clients.size();
-
-						for (it; it != clients.end(); it++) {
-							packet << client->GetRemotePort();
-
-							if (status == sf::Socket::Done) {
-								tcpSocket->Send(packet);
-							}
-						}
-						packet.clear();
 
 
 
@@ -75,7 +74,6 @@ void Server::ControlServidor()
 						clients.push_back(client);
 						// Add the new client to the selector so that we will
 						// be notified when he sends something
-						selector.add(*client->GetSocket());
 					}
 					else {//si esta solo esperar
 
@@ -89,7 +87,7 @@ void Server::ControlServidor()
 						clients.push_back(client);
 						// Add the new client to the selector so that we will
 						// be notified when he sends something
-						selector.add(*client->GetSocket());
+						selector->Add(client->GetSocket());
 					}
 
 
@@ -110,12 +108,12 @@ void Server::ControlServidor()
 				for (std::list<TCPSocket*>::iterator it = clients.begin(); it != clients.end(); ++it)
 				{
 					TCPSocket& client = **it;
-					if (selector.isReady(listener))
+					if (selector->isReady(&listener->GetListener()))
 					{
 						// The client has sent some data, we can receive it
 						sf::Packet packet;
-						status = client.Receive(packet);
-						if (status == sf::Socket::Done)
+						status->SetStatus(client.Receive(packet));
+						if (status->GetStatus() == sf::Socket::Done)
 						{
 							std::string strRec;
 							packet >> strRec;
@@ -131,7 +129,7 @@ void Server::ControlServidor()
 								}
 							}
 						}
-						else if (status == sf::Socket::Disconnected)
+						else if (status->GetStatus() == sf::Socket::Disconnected)
 						{
 							//selector.remove(client-);
 							std::cout << "Elimino el socket que se ha desconectado\n";
@@ -146,7 +144,7 @@ void Server::ControlServidor()
 		}
 	}
 
-}
+
 
 
 

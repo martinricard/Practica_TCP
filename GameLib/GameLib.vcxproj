@@ -143,11 +143,17 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="TCPListener.h" />
+    <ClInclude Include="TCPSocketSelector.h" />
+    <ClInclude Include="TCPStatus.h" />
     <ClInclude Include="Timer.h" />
     <ClInclude Include="Types.h" />
     <ClInclude Include="TCPSocket.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="TCPListener.cpp" />
+    <ClCompile Include="TCPSocketSelector.cpp" />
+    <ClCompile Include="TCPStatus.cpp" />
     <ClCompile Include="Timer.cpp" />
     <ClCompile Include="TCPSocket.cpp" />
   </ItemGroup>
