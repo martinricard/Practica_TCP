@@ -14,7 +14,7 @@ class Server
 	TCPListener* listener;
 	TCPStatus* status;
 	TCPSocketSelector* selector;
-	
+	bool onRoad;
 
 
 	//std::map<short, Client*> ourClients;
@@ -26,6 +26,7 @@ public:
 	Server();
 	~Server();
 	void SendClients(TCPSocket& socket);
+	void ServerListener();
 	void ControlServidor();
 	bool IsClientInMap(unsigned short checkPort);
 	
