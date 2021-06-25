@@ -59,5 +59,8 @@
     <ClCompile Include="TCPStatus.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Types.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

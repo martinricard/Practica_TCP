@@ -7,7 +7,7 @@ TCPSocket::TCPSocket()
 
 TCPSocket::TCPSocket(sf::TcpSocket* _tcpSocket)
 {
-    tcpSocket = _tcpSocket;
+    _tcpSocket = new sf::TcpSocket;
 }
 
 TCPSocket::~TCPSocket()
@@ -35,9 +35,11 @@ std::string TCPSocket::GetRemoteAddress()
 }
 
 unsigned short TCPSocket::GetRemotePort() {
+    return tcpSocket->getRemotePort();
+}
+unsigned short TCPSocket::GetLocalPort() {
     return tcpSocket->getLocalPort();
 }
-
 sf::Socket::Status TCPSocket::Connect(const std::string localhost, unsigned short port, sf::Time sec) {
     return tcpSocket->connect(localhost, port, sec);
 }

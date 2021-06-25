@@ -76,19 +76,70 @@ void Client::SendingThread() {//Envia los paquetes
 	}
 }
 void Client::RecievingThread() {
-	//sf::TcpListener listener;
-	////sf::Socket::Status status = listener.listen(tcpSocket->GetLocalPort());
-	//// Create a selector
-	//sf::SocketSelector *selector;
-	//// Add the listener to the selector
-	//if (status != sf::Socket::Done)
-	//{
-	//	std::cout << "Error al abrir listener\n";
-	//	exit(0);
-	//}
-	//else {
-	//	//selector->add(listener);
-	//}
+	while (true) {
+		sf::Packet packet;
+		status->SetStatus(tcpSocket->Receive(packet));
+		if (status->GetStatus() != sf::Socket::Done)
+		{
+			std::cout << "Error al recibir el paquete\n";
+		}
+		else {
+			std::cout << "Se ha recibido un paquete\n";
+			std::string stringTag;
+			packet >> stringTag;
+			LISTENER tag = StringToEnum(stringTag);
+			if (tag == LISTENER::ENVIAR_CLIENTESACTUALES) {
+				std::string numOfPlayers;
+				int auxiliarNumOfPlayers;
+				packet >> numOfPlayers;
+				auxiliarNumOfPlayers = std::stoi(numOfPlayers);
+				std::string stringPort;
+				int port;
+				for (int i = 0;i < auxiliarNumOfPlayers;i++) {
+
+					packet >> stringPort;
+					port = std::stoi(stringPort);
+					TCPSocket* client = new TCPSocket;
+
+					status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
+					if (status->GetStatus() == sf::Socket::Done) {
+						std::cout << "Se ha conectado con el cliente " << port << std::endl;
+						clients.push_back(client);
+						selector->Add(client->GetSocket());
+					}
+					else {
+						std::cout << "Error al conectarse con el jugador" << std::endl;
+						delete client;
+					}
+
+				}
+
+
+			}
+			if (tag == LISTENER::ENVIAR_NUEVOCLIENTE) {
+				int port;
+				std::string stringPort;
+
+				packet >> stringPort;
+				port = std::stoi(stringPort);
+				TCPSocket* client = new TCPSocket;
+
+				status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
+				if (status->GetStatus() == sf::Socket::Done) {
+					std::cout << "Se ha conectado con el cliente " << port << std::endl;
+					clients.push_back(client);
+					selector->Add(client->GetSocket());
+				}
+				else {
+					std::cout << "Error al conectarse con el jugador" << std::endl;
+					delete client;
+				}
+			
+			}
+
+
+		}
+	}
 
 
 
@@ -97,6 +148,7 @@ void Client::RecievingThread() {
 void Client::GetConnectedPlayers() {
 	sf::Packet packet;
 	status->SetStatus(tcpSocket->Receive(packet));
+
 	if (status->GetStatus() != sf::Socket::Done)
 	{
 		std::cout << "Error al recibir el paquete\n";
@@ -108,10 +160,13 @@ void Client::GetConnectedPlayers() {
 		int auxiliarNumOfPlayers;
 		packet >> numOfPlayers;
 		auxiliarNumOfPlayers = std::stoi(numOfPlayers);
-		unsigned short port;
-		if (enumListener == LISTENER::CONEXION_NUEVO_PLAYER) {
+		std::string stringPort;
+		int port;
+		if (enumListener == LISTENER::ENVIAR_CLIENTESACTUALES) {
 			for (int i = 0;i < auxiliarNumOfPlayers;i++) {
-				packet >> port;
+				
+				packet >> stringPort;
+				port = std::stoi(stringPort);
 				TCPSocket* client = new TCPSocket;
 
 				status->SetStatus(tcpSocket->Connect("localhost", port, sf::milliseconds(15.f)));
@@ -145,7 +200,7 @@ void Client::ConnectServer() {
 	else
 	{
 		std::cout << "Se ha establecido conexion\n";
-		status->SetStatus(listener->Listen(tcpSocket->GetRemotePort(), sf::IpAddress::LocalHost));
+		status->SetStatus(listener->Listen(tcpSocket->GetLocalPort(), sf::IpAddress::LocalHost));
 		if (status->GetStatus() == sf::Socket::Done) {
 			std::cout << "Se ha abierto el listener\n";
 
@@ -163,10 +218,30 @@ void Client::ConnectServer() {
 void Client::ClientLoop()
 {
 	ConnectServer();
-	//std::thread recievePackets(&Client::GetConnectedPlayers, this);
-	//recievePackets.detach();
-	GetConnectedPlayers();
+
+//	GetConnectedPlayers();
+
+	std::thread listeningRecieving(&Client::RecievingThread, this);
+	listeningRecieving.detach();
+
 	while (true) {
 
+	}
+}
+std::string Client::EnumToString(LISTENER _listener) {
+	if (_listener == ENVIAR_CLIENTESACTUALES) {
+		return "ENVIAR_CLIENTESACTUALES";
+	}
+	else if (_listener == ENVIAR_NUEVOCLIENTE) {
+		return "ENVIAR_NUEVOCLIENTE";
+
+	}
+}
+LISTENER Client::StringToEnum(std::string _string) {
+	if (_string == "ENVIAR_CLIENTESACTUALES") {
+		return LISTENER::ENVIAR_CLIENTESACTUALES;
+	}
+	else if (_string == "ENVIAR_NUEVOCLIENTE") {
+		return LISTENER::ENVIAR_NUEVOCLIENTE;
 	}
 }

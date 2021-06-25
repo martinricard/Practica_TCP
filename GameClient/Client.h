@@ -22,7 +22,7 @@ struct Client
 
 public:
 	
-	
+
 	Client();
 	~Client();
 	void Username();
@@ -39,6 +39,10 @@ public:
 	void ConnectServer();
 
 	void ClientLoop();
+
+	std::string EnumToString(LISTENER _listener);
+
+	LISTENER StringToEnum(std::string _string);
 
 };
 

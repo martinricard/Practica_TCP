@@ -19,19 +19,45 @@ Server::~Server()
 }
 
 
+void Server::SendNewClient(TCPSocket& socket) {
+	sf::Packet packet;
+	unsigned short port = socket.GetRemotePort();;
+	std::string stringPort = std::to_string(port);;
+	
 
+	for (auto it : clients) {
+		packet << EnumToString(ENVIAR_NUEVOCLIENTE);
+		packet << stringPort;
+		status->SetStatus(it->Send(packet));
+		if (status->GetStatus() == sf::Socket::Done) {
+			std::cout << "El paquete de enviar clientes se ha enviado correctamente" << std::endl;
+			packet.clear();
+		}
+		else {
+			std::cout << "El paquete de enviar clientes no se ha enviado correctamente" << std::endl;
+		}
+	}
+}
 void Server::SendClients(TCPSocket& socket) {
 	sf::Packet packet;
-	packet << LISTENER::CONEXION_NUEVO_PLAYER;
+	unsigned short port;
+	std::string stringPort;
+	std::string tag = EnumToString(ENVIAR_CLIENTESACTUALES);
+	packet << tag;
 	packet << std::to_string(clients.size());
 
 	for (auto it : clients) {
-		packet << it->GetRemotePort();
-	}
+	
 
+		port =it->GetRemotePort();
+		stringPort = std::to_string(port);
+		packet << stringPort;
+
+		
+	}
 	status->SetStatus(socket.Send(packet));
 	if (status->GetStatus() == sf::Socket::Done) {
-		std::cout << "El paquete de enviar clientes se ha enviado correctamente"<<std::endl;
+		std::cout << "El paquete de enviar clientes se ha enviado correctamente" << std::endl;
 		packet.clear();
 	}
 	else {
@@ -80,6 +106,7 @@ void Server::ControlServidor()
 					std::cout << "El cliente con puerto: " << tcpSocket->GetRemotePort() << " queda a la espera junto con " << clients.size() << " clientes mas" << std::endl;
 
 					SendClients(*tcpSocket);
+					SendNewClient(*tcpSocket);
 					selector->Add(tcpSocket->GetSocket());
 					clients.push_back(tcpSocket);
 
@@ -95,50 +122,23 @@ void Server::ControlServidor()
 		}
 	}
 }
-	//		else
-	//		{
-	//			// The listener socket is not ready, test all other sockets (the clients)
-	//			for (std::list<TCPSocket*>::iterator it = clients.begin(); it != clients.end(); ++it)
-	//			{
-	//				TCPSocket& client = **it;
-	//				if (selector->isReady(&listener->GetListener()))
-	//				{
-	//					// The client has sent some data, we can receive it
-	//					sf::Packet packet;
-	//					status->SetStatus(client.Receive(packet));
-	//					if (status->GetStatus() == sf::Socket::Done)
-	//					{
-	//						std::string strRec;
-	//						packet >> strRec;
-
-	//						if (clients.size() > 0) {
-	//							if (strRec.at(0) == 'u' && strRec.at(1) == ':') {//si tiene u: antes es el nombre de usuario
-	//								strRec.erase(strRec.begin(), strRec.begin() + 1);
-	//								//ourClients[client.getRemotePort()]->userName = strRec;
-	//							}
-	//							else {
-	//								//std::cout << "He recibido " << strRec << " del puerto " << client.getRemotePort() << " con username" << ourClients[client.getRemotePort()]->userName << std::endl;
-	//								std::cout << std::endl;
-	//							}
-	//						}
-	//					}
-	//					else if (status->GetStatus() == sf::Socket::Disconnected)
-	//					{
-	//						//selector.remove(client-);
-	//						std::cout << "Elimino el socket que se ha desconectado\n";
-	//					}
-	//					else
-	//					{
-	//						std::cout << "Error al recibir de " << client.GetSocket() << std::endl;
-	//					}
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
 
 
 
+std::string Server::EnumToString(LISTENER _listener) {
+	if (_listener == ENVIAR_CLIENTESACTUALES) {
+		return "ENVIAR_CLIENTESACTUALES";
+	}
+	else if (_listener == ENVIAR_NUEVOCLIENTE) {
+		return "ENVIAR_NUEVOCLIENTE";
 
-
-
+	}
+}
+LISTENER Server::StringToEnum(std::string _string) {
+	if (_string == "ENVIAR_CLIENTESACTUALES") {
+		return ENVIAR_CLIENTESACTUALES;
+	}
+	else if (_string == "ENVIAR_NUEVOCLIENTE") {
+		return ENVIAR_NUEVOCLIENTE;
+	}
+}

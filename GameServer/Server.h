@@ -25,9 +25,12 @@ public:
 	
 	Server();
 	~Server();
+	void SendNewClient(TCPSocket& socket);
 	void SendClients(TCPSocket& socket);
 	void ServerListener();
 	void ControlServidor();
+	std::string EnumToString(LISTENER _listener);
+	LISTENER StringToEnum(std::string _string);
 	bool IsClientInMap(unsigned short checkPort);
 	
 
