@@ -23,6 +23,10 @@ public:
 	TCPSocket(sf::TcpSocket* _tcpSocket);
 	~TCPSocket();
 
+	void SetID(int _id);
+	int GetID();
+
+
 	sf::TcpSocket* GetSocket();
 
 	void SetSocket(sf::TcpSocket*);

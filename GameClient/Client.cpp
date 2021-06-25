@@ -75,6 +75,33 @@ void Client::SendingThread() {//Envia los paquetes
 	
 	}
 }
+void Client::AssignDeck()
+{
+	deck = new Deck();
+	if (idPlayer == 0) {
+		seed = tcpSocket->GetRemotePort();
+		deck->MixDeck(seed);
+	}
+	else {
+		for (int i = 0;i < clients.size();i++) {
+			if (clients[i]->GetID() == 0) {
+				seed = clients[i]->GetID();
+				deck->MixDeck(seed);
+			
+			}
+		}
+	}
+
+}
+
+void Client::AsignTurns()
+{
+	for (int i = 0;i < 5;i++) {
+		playerCards[i] = new PlayerCards();
+
+	
+	}
+}
 void Client::RecievingThread() {
 	while (true) {
 		sf::Packet packet;
@@ -103,6 +130,7 @@ void Client::RecievingThread() {
 
 					status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
 					if (status->GetStatus() == sf::Socket::Done) {
+						client->SetID(i);
 						std::cout << "Se ha conectado con el cliente " << port << std::endl;
 						clients.push_back(client);
 						selector->Add(client->GetSocket());
@@ -113,6 +141,7 @@ void Client::RecievingThread() {
 					}
 
 				}
+				idPlayer = auxiliarNumOfPlayers;
 
 
 			}
@@ -127,6 +156,7 @@ void Client::RecievingThread() {
 				status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
 				if (status->GetStatus() == sf::Socket::Done) {
 					std::cout << "Se ha conectado con el cliente " << port << std::endl;
+					client->SetID(clients.size() + 1);
 					clients.push_back(client);
 					selector->Add(client->GetSocket());
 				}

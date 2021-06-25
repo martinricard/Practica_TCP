@@ -6,8 +6,12 @@
 #include "../GameLib/TCPStatus.h"
 
 #include "../GameLib/Timer.h"
+#include "../GameLib/Deck.h"
+#include "../GameLib/PlayerCards.h"
+
 struct Client
 {
+	int idPlayer, seed;
 	TCPSocket* tcpSocket;
 	TCPListener* listener;
 	TCPSocketSelector* selector;
@@ -17,9 +21,10 @@ struct Client
 	std::string userName;
 	bool firstTime = true;
 	int enumListener;
-	std::list<TCPSocket*> clients;
+	std::vector<TCPSocket*> clients;
+	Deck* deck;
 
-
+	std::map<int, PlayerCards*>playerCards;
 public:
 	
 
@@ -29,7 +34,8 @@ public:
 	void JoinGame();
 	void LineCout();
 
-
+	void AssignDeck();
+	void AsignTurns();
 	void RecievingThread();
 	void GetConnectedPlayers();
 	void SendingThread();

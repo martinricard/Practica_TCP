@@ -15,6 +15,16 @@ TCPSocket::~TCPSocket()
     delete[] this->tcpSocket;
 }
 
+void TCPSocket::SetID(int _id)
+{
+    id = _id;
+}
+
+int TCPSocket::GetID()
+{
+    return id;
+}
+
 sf::TcpSocket* TCPSocket::GetSocket()
 {
     return tcpSocket;
