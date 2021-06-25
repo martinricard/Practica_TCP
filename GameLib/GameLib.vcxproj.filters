@@ -36,6 +36,12 @@
     <ClInclude Include="TCPStatus.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Deck.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Card.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="TCPSocket.cpp">

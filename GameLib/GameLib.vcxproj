@@ -143,6 +143,8 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Card.h" />
+    <ClInclude Include="Deck.h" />
     <ClInclude Include="TCPListener.h" />
     <ClInclude Include="TCPSocketSelector.h" />
     <ClInclude Include="TCPStatus.h" />

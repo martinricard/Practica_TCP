@@ -23,7 +23,8 @@ Server::~Server()
 void Server::SendClients(TCPSocket& socket) {
 	sf::Packet packet;
 	packet << LISTENER::CONEXION_NUEVO_PLAYER;
-	packet << clients.size();
+	packet << std::to_string(clients.size());
+
 	for (auto it : clients) {
 		packet << it->GetRemotePort();
 	}
@@ -77,10 +78,11 @@ void Server::ControlServidor()
 				{
 					std::cout << "Llega el cliente con puerto: " << tcpSocket->GetRemotePort() << std::endl;
 					std::cout << "El cliente con puerto: " << tcpSocket->GetRemotePort() << " queda a la espera junto con " << clients.size() << " clientes mas" << std::endl;
+
 					SendClients(*tcpSocket);
 					selector->Add(tcpSocket->GetSocket());
-
 					clients.push_back(tcpSocket);
+
 
 				}
 				else

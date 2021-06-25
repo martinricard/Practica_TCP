@@ -1,7 +1,8 @@
 #pragma once
 const int SERVER_PORT = 50000;
-
-enum CULTURAS
+const int NUM_CULTURA = 7;
+const int NUM_FAMILIA = 6;
+enum class CULTURA
 {
 	ARABE,
 	BANTU,
@@ -12,7 +13,7 @@ enum CULTURAS
 	TIROLESA
 };
 
-enum MIEMBROS_FAMILIA
+enum class MIEMBRO_FAMILIA
 {
 	ABUELO,
 	ABUELA,

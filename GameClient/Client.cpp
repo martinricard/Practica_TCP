@@ -2,7 +2,10 @@
 
 Client::Client()
 {
-
+	tcpSocket = new TCPSocket();
+	listener = new TCPListener();
+	selector = new TCPSocketSelector();
+	status = new TCPStatus();
 
 }
 
@@ -91,57 +94,50 @@ void Client::RecievingThread() {
 
 }
 
-void Client::ListenerConnection() {
-	sf::TcpListener listenerConnection;
-	//sf::Socket::Status status = listenerConnection.listen(tcpSocket->GetLocalPort());
-	sf::Socket::Status status = listenerConnection.listen(50000);
-	if (status != sf::Socket::Done)
+void Client::GetConnectedPlayers() {
+	sf::Packet packet;
+	status->SetStatus(tcpSocket->Receive(packet));
+	if (status->GetStatus() != sf::Socket::Done)
 	{
-		std::cout << "Error al abrir listener\n";
-		exit(0);
+		std::cout << "Error al recibir el paquete\n";
 	}
-
-	// Create a selector
-	sf::SocketSelector selector;
-	// Add the listener to the selector
-	selector.add(listenerConnection);
-	// Endless loop that waits for new connections
-	while (!false)
-	{
-		// Make the selector wait for data on any socket
-		if (selector.wait())
-		{
-			
-				sf::Packet packet;
-				// The listener is ready: there is a pending connection
+	else {
+		std::cout << "Se ha recibido un paquete\n";
+		packet >> enumListener;
+		std::string numOfPlayers;
+		int auxiliarNumOfPlayers;
+		packet >> numOfPlayers;
+		auxiliarNumOfPlayers = std::stoi(numOfPlayers);
+		unsigned short port;
+		if (enumListener == LISTENER::CONEXION_NUEVO_PLAYER) {
+			for (int i = 0;i < auxiliarNumOfPlayers;i++) {
+				packet >> port;
 				TCPSocket* client = new TCPSocket;
-				status = client->Receive(packet);
-				packet >> enumListener;
-					int numOfPlayers;
-					packet >> numOfPlayers;
-					unsigned short port;
-					if (enumListener == LISTENER::CONEXION_NUEVO_PLAYER) {
-						for (int i = 0;i < numOfPlayers;i++) {
-							packet >> port;
-							tcpSocket->Connect("localhost", port, sf::milliseconds(15.f));
-							clients.push_back(client);
-						}
-					}
 
+				status->SetStatus(tcpSocket->Connect("localhost", port, sf::milliseconds(15.f)));
+				if (status->GetStatus() == sf::Socket::Done) {
+					std::cout << "Se ha conectado con el cliente " << port << std::endl;
+					clients.push_back(client);
+					selector->Add(client->GetSocket());
 				}
+				else {
+					std::cout << "Error al conectarse con el jugador" << std::endl;
+					delete client;
+				}
+
 			}
+
+
+		}
+
+
 		}
 	
-
-
-
-
-void Client::ClientLoop()
-{
-
-	TCPSocket socket;
-	sf::Socket::Status status = socket.Connect("localhost", 50000, sf::milliseconds(15.f));
-	if (status != sf::Socket::Done)
+}
+//Aqui nos conectamos al bss y tambien abrimos el listener
+void Client::ConnectServer() {
+	status->SetStatus(tcpSocket->Connect("localhost", 50000, sf::milliseconds(15.f)));
+	if (status->GetStatus() != sf::Socket::Done)
 	{
 		std::cout << "Error al establecer conexion\n";
 		exit(0);
@@ -149,53 +145,28 @@ void Client::ClientLoop()
 	else
 	{
 		std::cout << "Se ha establecido conexion\n";
+		status->SetStatus(listener->Listen(tcpSocket->GetRemotePort(), sf::IpAddress::LocalHost));
+		if (status->GetStatus() == sf::Socket::Done) {
+			std::cout << "Se ha abierto el listener\n";
 
-
-
-	}
-	std::string str = "hola";
-	std::string userName;
-	if (firstTime) {
-		std::cout << "Elige un userName: ";
-		std::cin >> userName;
-		std::cout << std::endl;
-		//std::getline(std::cin, userName);
-		userName = "u:" + userName;
-
-		sf::Packet packet;
-		packet << userName;
-		status = socket.Send(packet);
-		if (status != sf::Socket::Done)
-		{
-			std::cout << "Error al enviar userName\n";
 		}
 		else {
-		
+			std::cout << "Error al abrir el listener\n";
+			exit(0);
+
 		}
-		std::cout << std::endl;
-
-
-		firstTime = false;
 	}
-
-	do
-	{
-		ListenerConnection();
-
-		std::cout << "Escribe ... ";
-		std::cin >> str;
-		//std::getline(std::cin, str);
+}
 
 
-		sf::Packet packet;
-		packet << str;
-		status = socket.Send(packet);
-		if (status != sf::Socket::Done)
-		{
-			std::cout << "Error al enviar\n";
-		}
-		std::cout << std::endl;
-	} while (str != "exit");
-	socket.Disconnect();
 
+void Client::ClientLoop()
+{
+	ConnectServer();
+	//std::thread recievePackets(&Client::GetConnectedPlayers, this);
+	//recievePackets.detach();
+	GetConnectedPlayers();
+	while (true) {
+
+	}
 }
