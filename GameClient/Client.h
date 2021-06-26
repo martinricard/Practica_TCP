@@ -34,6 +34,8 @@ public:
 	void JoinGame();
 	void LineCout();
 
+	void JoinOrCreateRoom();
+
 	void AssignDeck();
 	void AsignTurns();
 	void RecievingThread();

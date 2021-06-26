@@ -48,33 +48,62 @@ static float GetRandomFloat() {
 
 		
 
-void Client::SendingThread() {//Envia los paquetes
+void Client::JoinOrCreateRoom() {//Envia los paquetes
 	sf::Packet packet;
 	sf::IpAddress ip = sf::IpAddress::LocalHost;
 	unsigned short port = SERVER_PORT;//Modificar este magic number
 	std::string message;
-	while (true)
-	{
-		if (protocolConnected) {
-			std::cout << std::endl << "Escribe el mensaje que quieras enviar: ";
-			std::cin >> message;
-			packet.clear();
+	std::string nombreSala;
+	std::string contraseña;
+	std::string numeroJugadores;
+	std::cout << std::endl << "Quieres crear o unirte a partida?(c/u): ";
+	std::cin >> message;
+	packet << EnumToString(DATOS_PARTIDA);
+	packet << std::to_string(tcpSocket->GetLocalPort());
+	if (message == "c") {
+		packet << message;
+		std::cout << std::endl << "Indica el nombre de la sala: ";
+		std::cin >> nombreSala;
+		packet << nombreSala;
+		std::cout << std::endl << "Indica numero de jugadores: ";
+		std::cin >> numeroJugadores;
+		packet << numeroJugadores;
+		std::cout << std::endl << "Quieres poner contraseña?(s/n): ";
+		std::cin >> message;
+		if (message == "s") {
+			std::cout << std::endl << "Indica la contraseña?: ";
+			std::cin >> contraseña;
+			packet << contraseña;
+			tcpSocket->Send(packet);
 
-			if (tcpSocket->tcpStatus == sf::Socket::Done) {
-				std::cout << std::endl << "Se ha enviado: " << message << std::endl;
-				packet.clear();
-
-				message = "";
-				//std::cout << std::endl << "Escribe el mensaje que quieras enviar: ";
-
-			}
-			else {
-				std::cout << "Ha habido un error enviando el paquete";
-			}
 		}
-	
+		else {
+			packet << "no";
+			tcpSocket->Send(packet);
+		}
 	}
+	else if (message == "u") {
+		std::string numOfPlayers;
+		std::string withPassword;
+		std::cout << std::endl << "Con cuantos jugadores quieres buscar?(3-6, n para no poner filtro. ";
+		std::cin >> numOfPlayers;
+
+		std::cout << std::endl << "Quieres mostrar partidas con contraseña? ";
+		std::cin >> withPassword;
+		packet.clear();
+		packet << EnumToString(LISTENER::DATOS_PARTIDA);
+		packet << std::to_string(tcpSocket->GetLocalPort());
+
+		packet << "u";
+		tcpSocket->Send(packet);
+
+	}
+			
+
 }
+	
+	
+
 void Client::AssignDeck()
 {
 	deck = new Deck();
@@ -166,6 +195,24 @@ void Client::RecievingThread() {
 				}
 			
 			}
+			if (tag == LISTENER::DATOS_PARTIDA) {
+				std::cout << "ENTRAMOS";
+				std::string numOfPlayers;
+				packet >> numOfPlayers;
+				int numOfPartidas = std::stoi(numOfPlayers);
+				std::string auxiliar2;
+				if (numOfPartidas != 0) {
+					for (int i = 0;i < numOfPartidas;i++) {
+						packet >> auxiliar2;
+						std::cout << auxiliar2 << std::endl;
+						packet >> auxiliar2;
+						std::cout << auxiliar2 << std::endl;
+						packet >> auxiliar2;
+						std::cout << auxiliar2 << std::endl;
+					}
+
+				}
+			}
 
 
 		}
@@ -248,7 +295,7 @@ void Client::ConnectServer() {
 void Client::ClientLoop()
 {
 	ConnectServer();
-
+	JoinOrCreateRoom();
 //	GetConnectedPlayers();
 
 	std::thread listeningRecieving(&Client::RecievingThread, this);
@@ -265,6 +312,12 @@ std::string Client::EnumToString(LISTENER _listener) {
 	else if (_listener == ENVIAR_NUEVOCLIENTE) {
 		return "ENVIAR_NUEVOCLIENTE";
 
+		
+	}
+	else if (_listener == DATOS_PARTIDA) {
+		return "DATOS_PARTIDA";
+
+
 	}
 }
 LISTENER Client::StringToEnum(std::string _string) {
@@ -273,5 +326,8 @@ LISTENER Client::StringToEnum(std::string _string) {
 	}
 	else if (_string == "ENVIAR_NUEVOCLIENTE") {
 		return LISTENER::ENVIAR_NUEVOCLIENTE;
+	}
+	else if (_string == "DATOS_PARTIDA") {
+		return LISTENER::DATOS_PARTIDA;
 	}
 }

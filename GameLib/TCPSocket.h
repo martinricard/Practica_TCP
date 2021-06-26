@@ -26,6 +26,9 @@ public:
 	void SetID(int _id);
 	int GetID();
 
+	std::string nombreSala;
+	std::string password;
+	int numeroJugadores;
 
 	sf::TcpSocket* GetSocket();
 
