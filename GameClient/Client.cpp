@@ -42,6 +42,33 @@ static float GetRandomFloat() {
 }
 
 
+void Client::checkReady() {
+	if (!playerReady) {
+		std::string message;
+		std::cout << "Escribe ready para empezar la partida: ";
+		std::cin >> message;
+		if (message == "ready") {
+			std::cout << "Estas listo para empezar la partida, hay que comprobar el resto de jugadores. " << std::endl;
+			playerReady = true;
+
+			sf::Packet packet;
+			for (auto it : clients) {
+				packet << LISTENER::READY;
+				status->SetStatus(it->Send(packet));
+				if (status->GetStatus() == sf::Socket::Done)
+				{
+					std::cout << "El paquete se ha enviado correctamente\n";
+					packet.clear();
+				}
+				else {
+					std::cout << "El paquete no se ha podido enviar\n";
+				}
+			}
+
+		}
+	}
+
+}
 
 
 
@@ -96,9 +123,10 @@ void Client::AssignDeck()
 
 void Client::AsignTurns()
 {
+	//ESTE 5 SERAN LOS NUMEROS DE JUGADORES QUE HAY EN LA PARTIDA
 	for (int i = 0;i < 5;i++) {
 		playerCards[i] = new PlayerCards();
-
+		playerCards[i]->actualTurn = 0;
 	
 	}
 }
@@ -146,25 +174,27 @@ void Client::RecievingThread() {
 
 			}
 			if (tag == LISTENER::ENVIAR_NUEVOCLIENTE) {
-				int port;
-				std::string stringPort;
+				if (clients.size() < 4) {
+					int port;
+					std::string stringPort;
 
-				packet >> stringPort;
-				port = std::stoi(stringPort);
-				TCPSocket* client = new TCPSocket;
+					packet >> stringPort;
+					port = std::stoi(stringPort);
+					TCPSocket* client = new TCPSocket;
 
-				status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
-				if (status->GetStatus() == sf::Socket::Done) {
-					std::cout << "Se ha conectado con el cliente " << port << std::endl;
-					client->SetID(clients.size() + 1);
-					clients.push_back(client);
-					selector->Add(client->GetSocket());
+					status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
+					if (status->GetStatus() == sf::Socket::Done) {
+						std::cout << "Se ha conectado con el cliente " << port << std::endl;
+						client->SetID(clients.size() + 1);
+						clients.push_back(client);
+						selector->Add(client->GetSocket());
+					}
+					else {
+						std::cout << "Error al conectarse con el jugador" << std::endl;
+						delete client;
+					}
+
 				}
-				else {
-					std::cout << "Error al conectarse con el jugador" << std::endl;
-					delete client;
-				}
-			
 			}
 
 
@@ -254,6 +284,8 @@ void Client::ClientLoop()
 	std::thread listeningRecieving(&Client::RecievingThread, this);
 	listeningRecieving.detach();
 
+	AssignDeck();
+	AsignTurns();
 	while (true) {
 
 	}

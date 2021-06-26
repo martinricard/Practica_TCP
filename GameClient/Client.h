@@ -25,6 +25,8 @@ struct Client
 	Deck* deck;
 
 	std::map<int, PlayerCards*>playerCards;
+	
+	bool playerReady;
 public:
 	
 
@@ -38,6 +40,7 @@ public:
 	void AsignTurns();
 	void RecievingThread();
 	void GetConnectedPlayers();
+	void checkReady();
 	void SendingThread();
 
 	void ListenerConnection();
