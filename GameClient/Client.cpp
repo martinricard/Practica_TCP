@@ -29,7 +29,7 @@ static float GetRandomFloat() {
 	static std::uniform_real_distribution<float> dis(0.f, 1.f);
 	return dis(gen);
 }
-void Client::CheckPlayersReady() {
+bool Client::CheckPlayersReady() {
 		LineCout();
 		bool ready = true;
 		system("cls");
@@ -49,20 +49,107 @@ void Client::CheckPlayersReady() {
 			LineCout();
 			std::cout << "            TODOS ESTAN READY";
 			LineCout();
+
 			gameBegin = true;
 
 		}
+		return ready;
+
 
 
 	
 }
+void Client::CheckPlayersReady2() {
+	LineCout();
+	bool ready = true;
+	system("cls");
+	if (!playerReady) {
+		ready = false;
+	}
+	for (auto it : clients) {
+		if (it->GetReady()) {
+			std::cout << "El jugador " << it->GetLocalPort() << " esta ready";
+		}
+		else {
+			std::cout << "El jugador " << it->GetLocalPort() << " no esta ready";
+			ready = false;
+		}
+	}
+	if (ready) {
+		LineCout();
+		std::cout << "            TODOS ESTAN READY";
+		LineCout();
+
+		gameBegin = true;
+
+	}
+
+
+
+
+}
+void Client::JoinOrCreateRoom() {//Envia los paquetes
+	sf::Packet packet;
+	sf::IpAddress ip = sf::IpAddress::LocalHost;
+	unsigned short port = SERVER_PORT;//Modificar este magic number
+	std::string message;
+	std::string nombreSala;
+	std::string contraseña;
+	std::string numeroJugadores;
+	std::cout << std::endl << "Quieres crear o unirte a partida?(c/u): ";
+	std::cin >> message;
+	packet << EnumToString(LISTENER::CREAR_PARTIDA);
+	packet << std::to_string(tcpSocket->GetLocalPort());
+	if (message == "c") {
+		packet << message;
+		std::cout << std::endl << "Indica el nombre de la sala: ";
+		std::cin >> nombreSala;
+		packet << nombreSala;
+		std::cout << std::endl << "Indica numero de jugadores:(3-6) ";
+		std::cin >> numeroJugadores;
+		packet << numeroJugadores;
+		std::cout << std::endl << "Quieres poner contraseña?(s/n): ";
+		std::cin >> message;
+		if (message == "s") {
+			std::cout << std::endl << "Indica la contraseña?: ";
+			std::cin >> contraseña;
+			packet << contraseña;
+			tcpSocket->Send(packet);
+
+		}
+		else {
+			packet << "no";
+			tcpSocket->Send(packet);
+		}
+	}
+	else if (message == "u") {
+		std::string numOfPlayers;
+		std::string withPassword;
+		std::cout << std::endl << "Con cuantos jugadores quieres la sala?(3-6, n para no poner filtro. ";
+		std::cin >> numOfPlayers;
+
+		std::cout << std::endl << "Quieres mostrar partidas con contraseña? ";
+		std::cin >> withPassword;
+		packet.clear();
+		packet << EnumToString(LISTENER::BUSCAR_PARTIDA);
+		packet << std::to_string(tcpSocket->GetLocalPort());
+		std::cout << std::to_string(tcpSocket->GetLocalPort());
+		packet << "u";
+		tcpSocket->Send(packet);
+
+	}
+
+
+}
+
+
 void Client::ManageReady(sf::Packet &packet, TCPSocket* _tcpSocket) {
 	for (auto it : clients) {
 		if (it->GetRemotePort() == _tcpSocket->GetRemotePort()) {
 			it->SetReady(true);
 		}
 	}
-	CheckPlayersReady();
+	CheckPlayersReady2();
 }
 void Client::checkReady() {
 	if (!playerReady) {
@@ -72,22 +159,23 @@ void Client::checkReady() {
 		if (message == "ready") {
 			std::cout << "Estas listo para empezar la partida, hay que comprobar el resto de jugadores. " << std::endl;
 			playerReady = true;
-
+			CheckPlayersReady2();
 			sf::Packet packet;
-			for (auto it : clients) {
-				
-				packet << EnumToString(LISTENER::READY);
-				status->SetStatus(it->Send(packet));
-				if (status->GetStatus() == sf::Socket::Done)
-				{
-					std::cout << "El paquete se ha enviado correctamente\n";
-					packet.clear();
-				}
-				else {
-					std::cout << "El paquete no se ha podido enviar\n";
-				}
-			}
+				for (auto it : clients) {
 
+					packet << EnumToString(LISTENER::READY);
+					status->SetStatus(it->Send(packet));
+					if (status->GetStatus() == sf::Socket::Done)
+					{
+						std::cout << "El paquete se ha enviado correctamente\n";
+						packet.clear();
+					}
+					else {
+						std::cout << "El paquete no se ha podido enviar\n";
+					}
+				}
+
+			
 		}
 	}
 
@@ -97,7 +185,7 @@ void Client::checkReady() {
 
 
 		
-
+/*
 void Client::SendingThread() {//Envia los paquetes
 	sf::Packet packet;
 	sf::IpAddress ip = sf::IpAddress::LocalHost;
@@ -125,6 +213,7 @@ void Client::SendingThread() {//Envia los paquetes
 	
 	}
 }
+*/
 void Client::AssignDeck()
 {
 	system("cls");
@@ -154,6 +243,15 @@ void Client::AsignTurns()
 		playerCards[i]->isPlaying = true;
 	
 	}
+
+	for (int i = 0; i < deck->deck.size();i++) {
+		if (i <= 7)playerCards[0]->giveCard(*deck->deck[i]);
+		else if(i>7&&i<=14)playerCards[1]->giveCard(*deck->deck[i]);
+		else if(i>14&&i<=21)playerCards[2]->giveCard(*deck->deck[i]);
+		else if(i>21&&i<=28)playerCards[3]->giveCard(*deck->deck[i]);
+		else playerCards[4]->giveCard(*deck->deck[i]);
+		
+	}
 }
 
 void Client::Waiting4Players() {
@@ -182,6 +280,7 @@ void Client::Waiting4Players() {
 	}
 	game = true;
 }
+/*
 void Client::RecievingThread() {
 	while (true) {
 		sf::Packet packet;
@@ -228,6 +327,8 @@ void Client::RecievingThread() {
 		}
 	}
 }
+
+*/
 LISTENER Client::GetTag(sf::Packet& packet) {
 	std::string auxiliar;
 	packet >> auxiliar;
@@ -268,6 +369,69 @@ void Client::ClientsListener() {
 		}
 	}
 }
+
+void Client::ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CULTURA _culture, MIEMBRO_FAMILIA _familia) {
+	Card* card = new Card(_culture, _familia);
+	playerCards[_actualPlayer]->giveCard(*card);
+	playerCards[_changePlayer]->eraseCard(*card);
+
+
+}
+
+
+void Client::PasarTurno() {
+	int actualTurn = playerCards[0]->actualTurn;
+
+	for (int i = 0; i < playerCards.size();i++) {
+		if (actualTurn == 4) {
+			playerCards[i]->actualTurn = 0;
+		}
+		else {
+			playerCards[i]->actualTurn = playerCards[i]->actualTurn + 1;
+		}
+	}
+}
+
+void Client::ChooseCard() {
+	do
+	{
+		std::cout << "Elige jugador al que robar:(Numero) ";
+		std::cin >> player2Steal;
+		std::cout << std::endl;
+	} while (player2Steal >6);
+	int auxCultura;
+	do
+	{
+		std::cout << "Elige la cultura:  0: ARABE   1: BANTU   2: CHINA   3: ESQUIMAL   4: INDIA   5: MEXICANA   6: TIROLESA " << std::endl;
+		std::cin >> auxCultura;
+		cultura = (CULTURA)auxCultura;
+
+	} while (auxCultura > 6);
+	int auxFamilia;
+	do
+	{
+		std::cout << "Elige la familia:  0: ABUELO   1: ABUELA   2: PADRE   3: MADRE   4: HIJO   5: HIJA" << std::endl;
+		std::cin >> auxFamilia;
+		familia = (MIEMBRO_FAMILIA)auxFamilia;
+
+	} while (auxFamilia > 5);
+	if (CheckCard(player2Steal, cultura, familia)) {
+		std::cout << "El jugador tiene la carta";
+		ChangeCardsBetweenPlayers(idPlayer, player2Steal, cultura, familia);
+		ManageGame();
+	
+	
+	
+	}
+	else {
+		std::cout << "El jugador no tiene la carta";
+		PasarTurno();
+		ManageGame();
+
+	}
+
+}
+
 void Client::GetConnectedPlayers() {
 	sf::Packet packet;
 	status->SetStatus(tcpSocket->Receive(packet));
@@ -336,10 +500,29 @@ void Client::ConnectServer() {
 		}
 	}
 }
+
+bool Client::CheckCard(int _id, CULTURA _cultura, MIEMBRO_FAMILIA _familia) {
+	Card* card = new Card(_cultura, _familia);
+	return playerCards[_id]->checkCard(*card);
+}
+
+
+
 void Client::ManageGame() {
 	if (idPlayer == playerCards[0]->actualTurn)
 	{
+		if (playerCards[idPlayer]->isPlaying) {
+			system("cls");
 
+			std::cout << "Estas son tus cartas: " << std::endl;
+			playerCards[idPlayer]->PrintHand();
+			ChooseCard();
+		}
+	}
+	else {
+		std::cout << idPlayer << std::endl;
+		std::cout << playerCards[0]->actualTurn << std::endl;
+		Sleep(1000);
 	}
 }
 
@@ -348,6 +531,7 @@ void Client::ClientLoop()
 {
 	ConnectServer();
 
+	//JoinOrCreateRoom();
 	GetConnectedPlayers();
 	
 	Waiting4Players();
@@ -361,7 +545,7 @@ void Client::ClientLoop()
 		checkReady();
 
 		while (gameBegin) {
-
+			ManageGame();
 		}
 	}
 }
@@ -377,6 +561,18 @@ std::string Client::EnumToString(LISTENER _listener) {
 		return "READY";
 
 	}
+	else if (_listener == DATOS_PARTIDA) {
+		return "DATOS_PARTIDA";
+
+	}
+	else if (_listener == BUSCAR_PARTIDA) {
+		return "BUSCAR_PARTIDA";
+
+	}
+	else if (_listener == CREAR_PARTIDA) {
+		return "CREAR_PARTIDA";
+
+	}
 }
 LISTENER Client::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -387,5 +583,14 @@ LISTENER Client::StringToEnum(std::string _string) {
 	}
 	else if (_string == "READY") {
 		return LISTENER::READY;
+	}
+	else if (_string == "DATOS_PARTIDA") {
+		return LISTENER::DATOS_PARTIDA;
+	}
+	else if (_string == "BUSCAR_PARTIDA") {
+		return LISTENER::BUSCAR_PARTIDA;
+	}
+	else if (_string == "CREAR_PARTIDA") {
+		return LISTENER::CREAR_PARTIDA;
 	}
 }

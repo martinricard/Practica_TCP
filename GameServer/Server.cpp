@@ -48,6 +48,82 @@ void Server::SendNewClient(TCPSocket& socket) {
 
 	}
 }
+
+void Server::RecievingThread() {
+	while (true) {
+		for (auto it : clients) {
+			if (selector->Wait()) {
+				if (selector->isReady(it->GetSocket())) {
+					sf::Packet packet;
+					status->SetStatus(it->Receive(packet));
+					if (status->GetStatus() == sf::Socket::Done)
+					{
+						std::string stringTag;
+						packet >> stringTag;
+						LISTENER tag = StringToEnum(stringTag);
+						unsigned short port;
+						std::string auxiliar;
+						packet >> auxiliar;
+						port = std::stoi(auxiliar);
+						if (tag == LISTENER::DATOS_PARTIDA) {
+							for (auto it : clients) {
+								std::cout << it->GetRemotePort();
+								std::cout << port;
+								if (port == it->GetRemotePort()) {
+									packet >> auxiliar;
+									if (auxiliar == "c") {
+										packet >> auxiliar;
+										it->nombreSala = auxiliar;
+										std::cout << it->nombreSala;
+										packet >> auxiliar;
+										it->numeroJugadores = std::stoi(auxiliar);
+										packet >> auxiliar;
+										if (auxiliar == "s") {
+											packet >> auxiliar;
+											it->password = auxiliar;
+										}
+										else {
+											it->password = "none";
+										}
+										Match* partida = new Match;
+										partida->clients.push_back(it);
+
+										partidas.push_back(partida);
+
+									}
+									else if (auxiliar == "u") {
+										packet.clear();
+										std::cout << "ENTRAMOS2";
+										packet << EnumToString(LISTENER::DATOS_PARTIDA);
+										if (partidas.size() != 0) {
+											std::cout << "ENTRAMOS3";
+
+											packet << std::to_string(partidas.size());
+											for (auto it2 : partidas) {
+												packet << it2->clients[0]->nombreSala;
+												packet << std::to_string(it2->clients.size());
+												packet << it2->clients[0]->numeroJugadores;
+
+											}
+											it->Send(packet);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+		}
+	}
+}
+
+
+
+
+
+
 void Server::SendClients(TCPSocket& socket) {
 	sf::Packet packet;
 	unsigned short port;
@@ -147,6 +223,19 @@ std::string Server::EnumToString(LISTENER _listener) {
 		return "READY";
 
 	}
+	else if (_listener == DATOS_PARTIDA) {
+		return "DATOS_PARTIDA";
+
+
+	}
+	else if (_listener == BUSCAR_PARTIDA) {
+		return "BUSCAR_PARTIDA";
+
+	}
+	else if (_listener == CREAR_PARTIDA) {
+		return "CREAR_PARTIDA";
+
+	}
 }
 LISTENER Server::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -157,5 +246,14 @@ LISTENER Server::StringToEnum(std::string _string) {
 	}
 	else if (_string == "READY") {
 		return LISTENER::READY;
+	}
+	else if (_string == "DATOS_PARTIDA") {
+		return LISTENER::DATOS_PARTIDA;
+	}
+	else if (_string == "BUSCAR_PARTIDA") {
+		return LISTENER::BUSCAR_PARTIDA;
+	}
+	else if (_string == "CREAR_PARTIDA") {
+		return LISTENER::CREAR_PARTIDA;
 	}
 }

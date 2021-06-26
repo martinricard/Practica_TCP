@@ -31,6 +31,11 @@ struct Client
 	bool game = false;
 	std::mutex clientMutex;
 	bool gameBegin = false;
+
+
+	int player2Steal;
+	CULTURA cultura;
+	MIEMBRO_FAMILIA familia;
 public:
 	
 
@@ -46,8 +51,14 @@ public:
 	void RecievingThread();
 	LISTENER GetTag(sf::Packet& packet);
 	void ClientsListener();
+	void ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CULTURA _culture, MIEMBRO_FAMILIA _familia);
+	void PasarTurno();
+	void ChooseCard();
 	void GetConnectedPlayers();
-	void CheckPlayersReady();
+	bool CheckPlayersReady();
+	void CheckPlayersReady2();
+
+	void JoinOrCreateRoom();
 	void ManageReady(sf::Packet& packet, TCPSocket* tcpSocket);
 	void checkReady();
 	void SendingThread();
@@ -55,6 +66,8 @@ public:
 	void ListenerConnection();
 
 	void ConnectServer();
+
+	bool CheckCard(int _id, CULTURA _cultura, MIEMBRO_FAMILIA _familia);
 
 	void ManageGame();
 

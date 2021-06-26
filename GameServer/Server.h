@@ -3,12 +3,13 @@
 #include "../GameLib/TCPListener.h"
 #include "../GameLib/TCPSocketSelector.h"
 #include "../GameLib/TCPStatus.h"
-
+#include "../GameLib/Match.h"
 class Server
 {
 	// Create a list to store the future clients
 	std::vector<TCPSocket*> clients;
 
+	std::list<Match*>partidas;
 
 	TCPSocket* tcpSocket;
 	TCPListener* listener;
@@ -26,6 +27,7 @@ public:
 	Server();
 	~Server();
 	void SendNewClient(TCPSocket& socket);
+	void RecievingThread();
 	void SendClients(TCPSocket& socket);
 	void ServerListener();
 	void ControlServidor();

@@ -13,6 +13,8 @@
 #include <random>
 #include <vector>
 #include <numeric>
+#include <windows.h>
+
 class TCPSocket
 {
 	sf::TcpSocket* tcpSocket;
@@ -20,6 +22,9 @@ class TCPSocket
 	bool ready;
 
 public:
+	std::string nombreSala;
+	std::string password;
+	int numeroJugadores;
 	sf::Socket::Status tcpStatus;
 	TCPSocket();
 	TCPSocket(sf::TcpSocket* _tcpSocket);
