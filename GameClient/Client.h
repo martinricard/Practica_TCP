@@ -29,6 +29,8 @@ struct Client
 	bool playerReady = false;
 
 	bool game = false;
+	std::mutex clientMutex;
+	bool gameBegin = false;
 public:
 	
 
@@ -40,11 +42,12 @@ public:
 
 	void AssignDeck();
 	void AsignTurns();
+	void Waiting4Players();
 	void RecievingThread();
 	LISTENER GetTag(sf::Packet& packet);
 	void ClientsListener();
 	void GetConnectedPlayers();
-	void ThreadReady();
+	void CheckPlayersReady();
 	void ManageReady(sf::Packet& packet, TCPSocket* tcpSocket);
 	void checkReady();
 	void SendingThread();
@@ -52,6 +55,8 @@ public:
 	void ListenerConnection();
 
 	void ConnectServer();
+
+	void ManageGame();
 
 	void ClientLoop();
 

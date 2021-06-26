@@ -29,11 +29,13 @@ static float GetRandomFloat() {
 	static std::uniform_real_distribution<float> dis(0.f, 1.f);
 	return dis(gen);
 }
-void Client::ThreadReady() {
-	while (true) {
+void Client::CheckPlayersReady() {
 		LineCout();
 		bool ready = true;
-
+		system("cls");
+		if (!playerReady) {
+			ready = false;
+		}
 		for (auto it : clients) {
 			if (it->GetReady()) {
 				std::cout << "El jugador " << it->GetLocalPort() << " esta ready";
@@ -47,11 +49,12 @@ void Client::ThreadReady() {
 			LineCout();
 			std::cout << "            TODOS ESTAN READY";
 			LineCout();
+			gameBegin = true;
 
 		}
 
 
-	}
+	
 }
 void Client::ManageReady(sf::Packet &packet, TCPSocket* _tcpSocket) {
 	for (auto it : clients) {
@@ -59,6 +62,7 @@ void Client::ManageReady(sf::Packet &packet, TCPSocket* _tcpSocket) {
 			it->SetReady(true);
 		}
 	}
+	CheckPlayersReady();
 }
 void Client::checkReady() {
 	if (!playerReady) {
@@ -71,7 +75,8 @@ void Client::checkReady() {
 
 			sf::Packet packet;
 			for (auto it : clients) {
-				packet << LISTENER::READY;
+				
+				packet << EnumToString(LISTENER::READY);
 				status->SetStatus(it->Send(packet));
 				if (status->GetStatus() == sf::Socket::Done)
 				{
@@ -122,6 +127,7 @@ void Client::SendingThread() {//Envia los paquetes
 }
 void Client::AssignDeck()
 {
+	system("cls");
 	deck = new Deck();
 	if (idPlayer == 0) {
 		seed = tcpSocket->GetRemotePort();
@@ -130,7 +136,7 @@ void Client::AssignDeck()
 	else {
 		for (int i = 0;i < clients.size();i++) {
 			if (clients[i]->GetID() == 0) {
-				seed = clients[i]->GetID();
+				seed = clients[i]->GetRemotePort();
 				deck->MixDeck(seed);
 			
 			}
@@ -145,8 +151,36 @@ void Client::AsignTurns()
 	for (int i = 0;i < 5;i++) {
 		playerCards[i] = new PlayerCards();
 		playerCards[i]->actualTurn = 0;
+		playerCards[i]->isPlaying = true;
 	
 	}
+}
+
+void Client::Waiting4Players() {
+	while (clients.size() < 4) {
+		if (selector->Wait()) {
+			if (selector->isReady(&listener->GetListener())) {
+				TCPSocket* client = new TCPSocket();
+				if (listener->Accept(client->GetSocket()) == sf::Socket::Done)
+				{
+					std::cout << "Connexion recibia de: " << client->GetRemotePort() << std::endl;
+					selector->Add(client->GetSocket());
+					client->SetID(clients.size() + 1);
+					clientMutex.lock();
+					clients.push_back(client);
+					clientMutex.unlock();
+					std::cout << "Hay " << clients.size() << " clientes conectados a este cliente." << std::endl;
+				}
+				else {
+					delete client;
+					std::cout << "Error al recibir un player." << std::endl;
+					exit(0);
+				}
+			}
+			
+		}
+	}
+	game = true;
 }
 void Client::RecievingThread() {
 	while (true) {
@@ -191,34 +225,6 @@ void Client::RecievingThread() {
 
 
 			}
-			if (tag == LISTENER::ENVIAR_NUEVOCLIENTE) {
-					int port;
-					std::string stringPort;
-
-					packet >> stringPort;
-					port = std::stoi(stringPort);
-					TCPSocket* client = new TCPSocket;
-
-					status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
-					if (status->GetStatus() == sf::Socket::Done) {
-						std::cout << "Se ha conectado con el cliente " << port << std::endl;
-						client->SetID(clients.size() + 1);
-						clients.push_back(client);
-						selector->Add(client->GetSocket());
-						if (clients.size() == 4) {
-							game = true;
-						}
-					}
-					else {
-						std::cout << "Error al conectarse con el jugador" << std::endl;
-						delete client;
-					}
-
-				
-				
-			}
-
-
 		}
 	}
 }
@@ -272,22 +278,25 @@ void Client::GetConnectedPlayers() {
 	}
 	else {
 		std::cout << "Se ha recibido un paquete\n";
-		packet >> enumListener;
-		std::string numOfPlayers;
-		int auxiliarNumOfPlayers;
-		packet >> numOfPlayers;
-		auxiliarNumOfPlayers = std::stoi(numOfPlayers);
-		std::string stringPort;
-		int port;
-		if (enumListener == LISTENER::ENVIAR_CLIENTESACTUALES) {
+		std::string stringTag;
+		packet >> stringTag;
+		LISTENER tag = StringToEnum(stringTag);
+		if (tag == LISTENER::ENVIAR_CLIENTESACTUALES) {
+			std::string numOfPlayers;
+			int auxiliarNumOfPlayers;
+			packet >> numOfPlayers;
+			auxiliarNumOfPlayers = std::stoi(numOfPlayers);
+			std::string stringPort;
+			int port;
 			for (int i = 0;i < auxiliarNumOfPlayers;i++) {
-				
+
 				packet >> stringPort;
 				port = std::stoi(stringPort);
 				TCPSocket* client = new TCPSocket;
 
 				status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
 				if (status->GetStatus() == sf::Socket::Done) {
+					client->SetID(i);
 					std::cout << "Se ha conectado con el cliente " << port << std::endl;
 					clients.push_back(client);
 					selector->Add(client->GetSocket());
@@ -298,13 +307,11 @@ void Client::GetConnectedPlayers() {
 				}
 
 			}
+			idPlayer = auxiliarNumOfPlayers;
 
 
 		}
-
-
-		}
-	
+	}
 }
 //Aqui nos conectamos al bss y tambien abrimos el listener
 void Client::ConnectServer() {
@@ -320,7 +327,7 @@ void Client::ConnectServer() {
 		status->SetStatus(listener->Listen(tcpSocket->GetLocalPort(), sf::IpAddress::LocalHost));
 		if (status->GetStatus() == sf::Socket::Done) {
 			std::cout << "Se ha abierto el listener\n";
-
+			selector->Add(&listener->GetListener());
 		}
 		else {
 			std::cout << "Error al abrir el listener\n";
@@ -329,23 +336,33 @@ void Client::ConnectServer() {
 		}
 	}
 }
+void Client::ManageGame() {
+	if (idPlayer == playerCards[0]->actualTurn)
+	{
 
+	}
+}
 
 
 void Client::ClientLoop()
 {
 	ConnectServer();
 
-//	GetConnectedPlayers();
+	GetConnectedPlayers();
+	
+	Waiting4Players();
 
-	std::thread listeningRecieving(&Client::RecievingThread, this);
-	listeningRecieving.detach();
-	std::thread clientsListener(&Client::ClientsListener, this);
-	clientsListener.detach();
-	//AssignDeck();
-	//AsignTurns();
-	while (true) {
-		//checkReady();
+	AssignDeck();
+	AsignTurns();
+	std::thread clientsSelector(&Client::ClientsListener, this);
+	clientsSelector.detach();
+
+	while (game) {
+		checkReady();
+
+		while (gameBegin) {
+
+		}
 	}
 }
 std::string Client::EnumToString(LISTENER _listener) {

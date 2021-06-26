@@ -4,7 +4,7 @@
 #include <map>
 struct PlayerCards {
 	int actualCards;
-
+	int isPlaying;
 	int actualTurn;
 	std::vector<Card>playerCards;
 
