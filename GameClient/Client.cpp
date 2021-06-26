@@ -93,7 +93,7 @@ void Client::JoinOrCreateRoom() {//Envia los paquetes
 		packet.clear();
 		packet << EnumToString(LISTENER::DATOS_PARTIDA);
 		packet << std::to_string(tcpSocket->GetLocalPort());
-
+		std::cout << std::to_string(tcpSocket->GetLocalPort());
 		packet << "u";
 		tcpSocket->Send(packet);
 
@@ -246,7 +246,7 @@ void Client::GetConnectedPlayers() {
 				port = std::stoi(stringPort);
 				TCPSocket* client = new TCPSocket;
 
-				status->SetStatus(tcpSocket->Connect("localhost", port, sf::milliseconds(15.f)));
+				status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
 				if (status->GetStatus() == sf::Socket::Done) {
 					std::cout << "Se ha conectado con el cliente " << port << std::endl;
 					clients.push_back(client);

@@ -20,59 +20,64 @@ Server::~Server()
 
 void Server::RecievingThread() {
 	while (true) {
-		sf::Packet packet;
-		status->SetStatus(tcpSocket->Receive(packet));
-		if (status->GetStatus() == sf::Socket::Done)
-		{
-			std::string stringTag;
-			packet >> stringTag;
-			LISTENER tag = StringToEnum(stringTag);
-			unsigned short port;
-			std::string auxiliar;
-			packet >> auxiliar;
-			port = std::stoi(auxiliar);
-			if (tag == LISTENER::DATOS_PARTIDA) {
-				for (auto it : clientsSinAsignar) {
-					std::cout << it->GetRemotePort();
-					std::cout << port;
-					if (port == it->GetRemotePort()) {
+		for (auto it : clientsSinAsignar) {
+			if (selector->Wait()) {
+				if (selector->isReady(it->GetSocket())) {
+					sf::Packet packet;
+					status->SetStatus(it->Receive(packet));
+					if (status->GetStatus() == sf::Socket::Done)
+					{
+						std::string stringTag;
+						packet >> stringTag;
+						LISTENER tag = StringToEnum(stringTag);
+						unsigned short port;
+						std::string auxiliar;
 						packet >> auxiliar;
-						if (auxiliar == "c") {
-							packet >> auxiliar;
-							it->nombreSala = auxiliar;
-							std::cout << it->nombreSala;
-							packet >> auxiliar;
-							it->numeroJugadores = std::stoi(auxiliar);
-							packet >> auxiliar;
-							if (auxiliar == "s") {
-								packet >> auxiliar;
-								it->password = auxiliar;
-							}
-							else {
-								it->password = "none";
-							}
-							std::list<TCPSocket*>auxiliar;
-							auxiliar.push_back(it);
-							Match *partida = new Match;
-							partidas.push_back(partida);
-							partida->clients.push_back(it);
-							
-						}
-						else if (auxiliar == "u") {
-							packet.clear();
-							std::cout << "ENTRAMOS2";
-							packet << EnumToString(LISTENER::DATOS_PARTIDA);
-							if (partidas.size() != 0) {
-								std::cout << "ENTRAMOS3";
+						port = std::stoi(auxiliar);
+						if (tag == LISTENER::DATOS_PARTIDA) {
+							for (auto it : clientsSinAsignar) {
+								std::cout << it->GetRemotePort();
+								std::cout << port;
+								if (port == it->GetRemotePort()) {
+									packet >> auxiliar;
+									if (auxiliar == "c") {
+										packet >> auxiliar;
+										it->nombreSala = auxiliar;
+										std::cout << it->nombreSala;
+										packet >> auxiliar;
+										it->numeroJugadores = std::stoi(auxiliar);
+										packet >> auxiliar;
+										if (auxiliar == "s") {
+											packet >> auxiliar;
+											it->password = auxiliar;
+										}
+										else {
+											it->password = "none";
+										}
+										Match* partida = new Match;
+										partida->clients.push_back(it);
 
-								packet << std::to_string(partidas.size());
-								for (auto it2 : partidas) {
-									packet << it2->clients[0]->nombreSala;
-									packet << std::to_string(clients.size());
-									packet << it2->clients[0]->numeroJugadores;
+										partidas.push_back(partida);
 
+									}
+									else if (auxiliar == "u") {
+										packet.clear();
+										std::cout << "ENTRAMOS2";
+										packet << EnumToString(LISTENER::DATOS_PARTIDA);
+										if (partidas.size() != 0) {
+											std::cout << "ENTRAMOS3";
+
+											packet << std::to_string(partidas.size());
+											for (auto it2 : partidas) {
+												packet << it2->clients[0]->nombreSala;
+												packet << std::to_string(it2->clients.size());
+												packet << it2->clients[0]->numeroJugadores;
+
+											}
+											it->Send(packet);
+										}
+									}
 								}
-								it->Send(packet);
 							}
 						}
 					}
@@ -80,8 +85,6 @@ void Server::RecievingThread() {
 			}
 
 		}
-
-
 	}
 }
 
@@ -167,17 +170,17 @@ void Server::ControlServidor()
 			if (selector->isReady(&listener->GetListener()))
 			{
 				// The listener is ready: there is a pending connection
-				tcpSocket = new TCPSocket();
+				TCPSocket* client = new TCPSocket();
 
-				if (listener->Accept(tcpSocket->GetSocket()) == sf::Socket::Done)
+				if (listener->Accept(client->GetSocket()) == sf::Socket::Done)
 				{
-					std::cout << "Llega el cliente con puerto: " << tcpSocket->GetRemotePort() << std::endl;
-					std::cout << "El cliente con puerto: " << tcpSocket->GetRemotePort() << " queda a la espera junto con " << clientsSinAsignar.size() << " clientes mas" << std::endl;
+					std::cout << "Llega el cliente con puerto: " << client->GetRemotePort() << std::endl;
+					std::cout << "El cliente con puerto: " << client->GetRemotePort() << " queda a la espera junto con " << clientsSinAsignar.size() << " clientes mas" << std::endl;
 
 					//SendClients(*tcpSocket);
 					//SendNewClient(*tcpSocket);
-					selector->Add(tcpSocket->GetSocket());
-					clientsSinAsignar.push_back(tcpSocket);
+					selector->Add(client->GetSocket());
+					clientsSinAsignar.push_back(client);
 
 
 				}
@@ -185,7 +188,7 @@ void Server::ControlServidor()
 				{
 					// Error, we won't get a new connection, delete the socket
 					std::cout << "Error al recoger conexión nueva\n";
-					delete tcpSocket;
+					delete client;
 				}
 			}
 		}
