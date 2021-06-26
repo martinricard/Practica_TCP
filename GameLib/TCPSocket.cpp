@@ -69,3 +69,11 @@ sf::Socket::Status TCPSocket::Send(sf::Packet pack)
     return tcpSocket->send(pack);
 }
 
+bool TCPSocket::GetReady()
+{
+    return ready;
+}
+void TCPSocket::SetReady(bool _ready) {
+    ready = _ready;
+}
+

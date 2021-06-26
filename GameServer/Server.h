@@ -7,7 +7,7 @@
 class Server
 {
 	// Create a list to store the future clients
-	std::list<TCPSocket*> clients;
+	std::vector<TCPSocket*> clients;
 
 
 	TCPSocket* tcpSocket;

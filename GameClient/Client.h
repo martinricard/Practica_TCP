@@ -26,7 +26,9 @@ struct Client
 
 	std::map<int, PlayerCards*>playerCards;
 	
-	bool playerReady;
+	bool playerReady = false;
+
+	bool game = false;
 public:
 	
 
@@ -39,7 +41,11 @@ public:
 	void AssignDeck();
 	void AsignTurns();
 	void RecievingThread();
+	LISTENER GetTag(sf::Packet& packet);
+	void ClientsListener();
 	void GetConnectedPlayers();
+	void ThreadReady();
+	void ManageReady(sf::Packet& packet, TCPSocket* tcpSocket);
 	void checkReady();
 	void SendingThread();
 

@@ -33,9 +33,19 @@ void Server::SendNewClient(TCPSocket& socket) {
 			std::cout << "El paquete de enviar clientes se ha enviado correctamente" << std::endl;
 			packet.clear();
 		}
-		else {
-			std::cout << "El paquete de enviar clientes no se ha enviado correctamente" << std::endl;
+		else if(status->GetStatus()==sf::Socket::Disconnected) {
+			selector->Remove(it->GetSocket());
+			int aux;
+			for (int i = 0;i < clients.size();i++) {
+				if (clients[i]->GetRemotePort() == it->GetRemotePort()) {
+					aux = i;
+				}
+			}
+			clients.erase(clients.begin() + aux);
+			std::cout << "SE HA DESCONECTADO UN CLIENTE " << std::endl;
+			
 		}
+
 	}
 }
 void Server::SendClients(TCPSocket& socket) {
@@ -133,6 +143,10 @@ std::string Server::EnumToString(LISTENER _listener) {
 		return "ENVIAR_NUEVOCLIENTE";
 
 	}
+	else if (_listener == READY) {
+		return "READY";
+
+	}
 }
 LISTENER Server::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -140,5 +154,8 @@ LISTENER Server::StringToEnum(std::string _string) {
 	}
 	else if (_string == "ENVIAR_NUEVOCLIENTE") {
 		return ENVIAR_NUEVOCLIENTE;
+	}
+	else if (_string == "READY") {
+		return LISTENER::READY;
 	}
 }

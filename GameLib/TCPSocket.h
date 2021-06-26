@@ -17,12 +17,13 @@ class TCPSocket
 {
 	sf::TcpSocket* tcpSocket;
 	int id;
+	bool ready;
+
 public:
 	sf::Socket::Status tcpStatus;
 	TCPSocket();
 	TCPSocket(sf::TcpSocket* _tcpSocket);
 	~TCPSocket();
-
 	void SetID(int _id);
 	int GetID();
 
@@ -48,7 +49,9 @@ public:
 
 	sf::Socket::Status Send(sf::Packet pack);
 
+	bool GetReady();
 	
+	void SetReady(bool _ready);
 
 };
 

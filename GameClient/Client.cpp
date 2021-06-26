@@ -12,18 +12,7 @@ Client::Client()
 Client::~Client()
 {
 }
-//Se une a la partida si escribe y, sino se cierra la consola
-void Client::JoinGame() {
-	std::string confirmation;
-	std::cout << std::endl << "Do you want to join or create a game? (y/n): ";
-	std::cin >> confirmation;
-	if (confirmation == "y" || confirmation == "Y") {
-		system("cls");
-	}
-	else {
-		exit(0);
-	}
-}
+
 
 //Cuando el cliente recibe un manageChallenge_Q, lo recibe, solucionar el challenge se hace en la parte donde recibe el paquete
 
@@ -40,8 +29,37 @@ static float GetRandomFloat() {
 	static std::uniform_real_distribution<float> dis(0.f, 1.f);
 	return dis(gen);
 }
+void Client::ThreadReady() {
+	while (true) {
+		LineCout();
+		bool ready = true;
+
+		for (auto it : clients) {
+			if (it->GetReady()) {
+				std::cout << "El jugador " << it->GetLocalPort() << " esta ready";
+			}
+			else{
+				std::cout << "El jugador " << it->GetLocalPort() << " no esta ready";
+				ready = false;
+			}
+		}
+		if (ready) {
+			LineCout();
+			std::cout << "            TODOS ESTAN READY";
+			LineCout();
+
+		}
 
 
+	}
+}
+void Client::ManageReady(sf::Packet &packet, TCPSocket* _tcpSocket) {
+	for (auto it : clients) {
+		if (it->GetRemotePort() == _tcpSocket->GetRemotePort()) {
+			it->SetReady(true);
+		}
+	}
+}
 void Client::checkReady() {
 	if (!playerReady) {
 		std::string message;
@@ -174,7 +192,6 @@ void Client::RecievingThread() {
 
 			}
 			if (tag == LISTENER::ENVIAR_NUEVOCLIENTE) {
-				if (clients.size() < 4) {
 					int port;
 					std::string stringPort;
 
@@ -188,23 +205,63 @@ void Client::RecievingThread() {
 						client->SetID(clients.size() + 1);
 						clients.push_back(client);
 						selector->Add(client->GetSocket());
+						if (clients.size() == 4) {
+							game = true;
+						}
 					}
 					else {
 						std::cout << "Error al conectarse con el jugador" << std::endl;
 						delete client;
 					}
 
-				}
+				
+				
 			}
 
 
 		}
 	}
-
-
-
+}
+LISTENER Client::GetTag(sf::Packet& packet) {
+	std::string auxiliar;
+	packet >> auxiliar;
+	return StringToEnum(auxiliar);
 }
 
+void Client::ClientsListener() {
+	while (true) {
+		for (auto it : clients) {
+			if (selector->Wait()) {
+				if (selector->isReady(it->GetSocket()))
+				{
+					sf::Packet packet;
+					status->SetStatus(it->Receive(packet));
+					if (status->GetStatus() == sf::Socket::Done) {
+						LISTENER tag = GetTag(packet);
+						switch (tag)
+						{
+						case READY:
+							ManageReady(packet, it);
+							break;
+						}
+
+
+					}
+					else if (status->GetStatus()==sf::Socket::Disconnected) {
+						selector->Remove(it->GetSocket());
+						int aux = -1;
+						for (int i = 0;i < clients.size();i++) {
+							if (clients[i]->GetRemotePort() == it->GetRemotePort()) {
+								aux = i;
+							}
+						}
+						clients.erase(clients.begin() + aux);
+					}
+				}
+			}
+		}
+	}
+}
 void Client::GetConnectedPlayers() {
 	sf::Packet packet;
 	status->SetStatus(tcpSocket->Receive(packet));
@@ -229,7 +286,7 @@ void Client::GetConnectedPlayers() {
 				port = std::stoi(stringPort);
 				TCPSocket* client = new TCPSocket;
 
-				status->SetStatus(tcpSocket->Connect("localhost", port, sf::milliseconds(15.f)));
+				status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
 				if (status->GetStatus() == sf::Socket::Done) {
 					std::cout << "Se ha conectado con el cliente " << port << std::endl;
 					clients.push_back(client);
@@ -255,7 +312,7 @@ void Client::ConnectServer() {
 	if (status->GetStatus() != sf::Socket::Done)
 	{
 		std::cout << "Error al establecer conexion\n";
-		exit(0);
+		//exit(0);
 	}
 	else
 	{
@@ -267,7 +324,7 @@ void Client::ConnectServer() {
 		}
 		else {
 			std::cout << "Error al abrir el listener\n";
-			exit(0);
+			//exit(0);
 
 		}
 	}
@@ -283,11 +340,12 @@ void Client::ClientLoop()
 
 	std::thread listeningRecieving(&Client::RecievingThread, this);
 	listeningRecieving.detach();
-
-	AssignDeck();
-	AsignTurns();
+	std::thread clientsListener(&Client::ClientsListener, this);
+	clientsListener.detach();
+	//AssignDeck();
+	//AsignTurns();
 	while (true) {
-
+		//checkReady();
 	}
 }
 std::string Client::EnumToString(LISTENER _listener) {
@@ -298,6 +356,10 @@ std::string Client::EnumToString(LISTENER _listener) {
 		return "ENVIAR_NUEVOCLIENTE";
 
 	}
+	else if (_listener == READY) {
+		return "READY";
+
+	}
 }
 LISTENER Client::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -305,5 +367,8 @@ LISTENER Client::StringToEnum(std::string _string) {
 	}
 	else if (_string == "ENVIAR_NUEVOCLIENTE") {
 		return LISTENER::ENVIAR_NUEVOCLIENTE;
+	}
+	else if (_string == "READY") {
+		return LISTENER::READY;
 	}
 }
