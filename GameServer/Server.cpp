@@ -51,70 +51,176 @@ void Server::SendNewClient(TCPSocket& socket) {
 
 void Server::RecievingThread() {
 	while (true) {
-		for (auto it : clients) {
-			if (selector->Wait()) {
-				if (selector->isReady(it->GetSocket())) {
-					sf::Packet packet;
-					status->SetStatus(it->Receive(packet));
-					if (status->GetStatus() == sf::Socket::Done)
-					{
-						std::string stringTag;
-						packet >> stringTag;
-						LISTENER tag = StringToEnum(stringTag);
-						unsigned short port;
-						std::string auxiliar;
-						packet >> auxiliar;
-						port = std::stoi(auxiliar);
-						if (tag == LISTENER::DATOS_PARTIDA) {
-							for (auto it : clients) {
-								std::cout << it->GetRemotePort();
-								std::cout << port;
-								if (port == it->GetRemotePort()) {
-									packet >> auxiliar;
-									if (auxiliar == "c") {
+		if (clients.size() != 0) {
+			for (auto it : clients) {
+				if (selector->Wait()) {
+					if (selector->isReady(it->GetSocket())) {
+						sf::Packet packet;
+						status->SetStatus(it->Receive(packet));
+						if (status->GetStatus() == sf::Socket::Done)
+						{
+							std::string stringTag;
+							packet >> stringTag;
+							LISTENER tag = StringToEnum(stringTag);
+							unsigned short port;
+							std::string auxiliar;
+							packet >> auxiliar;
+							port = std::stoi(auxiliar);
+							if (tag == LISTENER::CREAR_PARTIDA) {
+								for (auto it : clients) {
+									std::cout << it->GetRemotePort();
+									std::cout << port;
+									if (port == it->GetRemotePort()) {
 										packet >> auxiliar;
-										it->nombreSala = auxiliar;
-										std::cout << it->nombreSala;
-										packet >> auxiliar;
-										it->numeroJugadores = std::stoi(auxiliar);
-										packet >> auxiliar;
-										if (auxiliar == "s") {
+										if (auxiliar == "c") {
 											packet >> auxiliar;
-											it->password = auxiliar;
-										}
-										else {
-											it->password = "none";
-										}
-										Match* partida = new Match;
-										partida->clients.push_back(it);
-
-										partidas.push_back(partida);
-
-									}
-									else if (auxiliar == "u") {
-										packet.clear();
-										std::cout << "ENTRAMOS2";
-										packet << EnumToString(LISTENER::DATOS_PARTIDA);
-										if (partidas.size() != 0) {
-											std::cout << "ENTRAMOS3";
-
-											packet << std::to_string(partidas.size());
-											for (auto it2 : partidas) {
-												packet << it2->clients[0]->nombreSala;
-												packet << std::to_string(it2->clients.size());
-												packet << it2->clients[0]->numeroJugadores;
-
+											it->nombreSala = auxiliar;
+											std::cout << it->nombreSala;
+											packet >> auxiliar;
+											it->numeroJugadores = std::stoi(auxiliar);
+											packet >> auxiliar;
+											if (auxiliar == "s") {
+												packet >> auxiliar;
+												it->password = auxiliar;
 											}
-											it->Send(packet);
+											else {
+												it->password = "none";
+											}
+											Match* partida = new Match;
+											partidas.push_back(partida);
+											SendClients(*it, *partida);
+
+											partida->clients.push_back(it);
+											int aux;
+											for (int i = 0;i < clients.size();i++) {
+												if (clients[i]->GetRemotePort() == it->GetRemotePort()) {
+													aux = i;
+												}
+											}
+											clients.erase(clients.begin() + aux);
 										}
 									}
 								}
 							}
+							else if (tag == LISTENER::UNIRSE_PARTIDA) {
+								std::string nameOfRoom;
+								std::string password;
+								packet >> nameOfRoom;
+								packet >> password;
+
+								if (partidas.size() != 0) {
+									for (auto it2 : partidas) {
+										if (it2->clients[0]->nombreSala == nameOfRoom && password == it2->clients[0]->password) {
+											SendClients(*it, *it2);
+											it2->clients.push_back(it);
+
+											int aux;
+											for (int i = 0;i < clients.size();i++) {
+												if (clients[i]->GetRemotePort() == it->GetRemotePort()) {
+													aux = i;
+												}
+											}
+											clients.erase(clients.begin() + aux);
+										}
+									}
+								}
+
+							}
+							else if (tag == LISTENER::BUSCAR_PARTIDA) {
+								std::string numeroJugadores;
+								std::string conContra;
+								int numeroJugadoresInt;
+								packet >> numeroJugadores;
+								packet >> conContra;
+								if (numeroJugadores != "n") {
+									numeroJugadoresInt = std::stoi(numeroJugadores);
+								}
+								int size = 0;
+								if (partidas.size() != 0) {
+									for (auto it2 : partidas) {
+										if (numeroJugadores == "n") {
+											if (conContra == "n" && it2->clients[0]->password == "none") {
+												size++;
+											}
+											else if (conContra == "s" && it2->clients[0]->password != "none") {
+												size++;
+											}
+										}
+
+										else {
+											if (numeroJugadoresInt == it2->clients[0]->numeroJugadores) {
+												if (conContra == "n" && it2->clients[0]->password == "none") {
+													size++;
+												}
+												else if (conContra == "s" && it2->clients[0]->password != "none") {
+													size++;
+												}
+											}
+										}
+									}
+									packet.clear();
+									packet << EnumToString(BUSCAR_PARTIDA);
+									packet << std::to_string(size);
+									for (auto it2 : partidas) {
+										if (numeroJugadores == "n") {
+											if (conContra == "n" && it2->clients[0]->password == "none") {
+												packet << it2->clients[0]->nombreSala;
+												packet << std::to_string(it2->clients.size());
+												packet << std::to_string(it2->clients[0]->numeroJugadores);
+											}
+											else if (conContra == "s" && it2->clients[0]->password != "none") {
+												packet << it2->clients[0]->nombreSala;
+												packet << std::to_string(it2->clients.size());
+												packet << std::to_string(it2->clients[0]->numeroJugadores);
+											}
+										}
+
+										else {
+											if (numeroJugadoresInt == it2->clients[0]->numeroJugadores) {
+												if (conContra == "n" && it2->clients[0]->password == "none") {
+													packet << it2->clients[0]->nombreSala;
+													packet << std::to_string(it2->clients.size());
+													packet << std::to_string(it2->clients[0]->numeroJugadores);
+												}
+												else if (conContra == "s" && it2->clients[0]->password != "none") {
+													packet << it2->clients[0]->nombreSala;
+													packet << std::to_string(it2->clients.size());
+													packet << std::to_string(it2->clients[0]->numeroJugadores);
+												}
+											}
+										}
+									}
+									it->Send(packet);
+								}
+
+
+
+							}
+							/*else if (auxiliar == "u") {
+								packet.clear();
+								std::cout << "ENTRAMOS2";
+								packet << EnumToString(LISTENER::DATOS_PARTIDA);
+								if (partidas.size() != 0) {
+									std::cout << "ENTRAMOS3";
+
+									packet << std::to_string(partidas.size());
+									for (auto it2 : partidas) {
+										packet << it2->clients[0]->nombreSala;
+										packet << std::to_string(it2->clients.size());
+										packet << it2->clients[0]->numeroJugadores;
+
+									}
+									it->Send(packet);
+								}
+							}
+						}
+					}*/
+
 						}
 					}
 				}
-			}
 
+			}
 		}
 	}
 }
@@ -123,16 +229,15 @@ void Server::RecievingThread() {
 
 
 
-
-void Server::SendClients(TCPSocket& socket) {
+void Server::SendClients(TCPSocket& socket, Match partida) {
 	sf::Packet packet;
 	unsigned short port;
 	std::string stringPort;
 	std::string tag = EnumToString(ENVIAR_CLIENTESACTUALES);
 	packet << tag;
-	packet << std::to_string(clients.size());
+	packet << std::to_string(partida.clients.size());
 
-	for (auto it : clients) {
+	for (auto it : partida.clients) {
 	
 
 		port =it->GetRemotePort();
@@ -174,6 +279,8 @@ void Server::ControlServidor()
 	// Create a socket to listen to new connections
 	ServerListener();
 
+	std::thread t(&Server::RecievingThread, this);
+	t.detach();
 	// Endless loop that waits for new connections
 	while (onRoad)
 	{
@@ -191,8 +298,7 @@ void Server::ControlServidor()
 					std::cout << "Llega el cliente con puerto: " << tcpSocket->GetRemotePort() << std::endl;
 					std::cout << "El cliente con puerto: " << tcpSocket->GetRemotePort() << " queda a la espera junto con " << clients.size() << " clientes mas" << std::endl;
 
-					SendClients(*tcpSocket);
-					SendNewClient(*tcpSocket);
+					//SendClients(*tcpSocket);
 					selector->Add(tcpSocket->GetSocket());
 					clients.push_back(tcpSocket);
 
@@ -236,6 +342,10 @@ std::string Server::EnumToString(LISTENER _listener) {
 		return "CREAR_PARTIDA";
 
 	}
+	else if (_listener == UNIRSE_PARTIDA) {
+		return "UNIRSE_PARTIDA";
+
+	}
 }
 LISTENER Server::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -255,5 +365,8 @@ LISTENER Server::StringToEnum(std::string _string) {
 	}
 	else if (_string == "CREAR_PARTIDA") {
 		return LISTENER::CREAR_PARTIDA;
+	}
+	else if (_string == "UNIRSE_PARTIDA") {
+		return LISTENER::UNIRSE_PARTIDA;
 	}
 }

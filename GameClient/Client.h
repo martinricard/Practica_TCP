@@ -16,7 +16,7 @@ struct Client
 	TCPListener* listener;
 	TCPSocketSelector* selector;
 	TCPStatus* status;
-
+	bool getClients = false;
 	bool protocolConnected;
 	std::string userName;
 	bool firstTime = true;

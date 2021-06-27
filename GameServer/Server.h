@@ -28,7 +28,8 @@ public:
 	~Server();
 	void SendNewClient(TCPSocket& socket);
 	void RecievingThread();
-	void SendClients(TCPSocket& socket);
+	//void SendClients(TCPSocket& socket);
+	void SendClients(TCPSocket& socket, Match partida);
 	void ServerListener();
 	void ControlServidor();
 	std::string EnumToString(LISTENER _listener);
