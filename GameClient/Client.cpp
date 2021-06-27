@@ -100,7 +100,7 @@ void Client::JoinOrCreateRoom() {//Envia los paquetes
 		std::string nombreSala;
 		std::string contraseña;
 		std::string numeroJugadores;
-		std::cout << std::endl << "Quieres crear, buscar o unirte a partida?(c/u): ";
+		std::cout << std::endl << "Quieres crear, buscar o unirte a partida?(c/b/u): ";
 		std::cin >> message;
 		packet << EnumToString(LISTENER::CREAR_PARTIDA);
 		packet << std::to_string(tcpSocket->GetLocalPort());
@@ -278,30 +278,34 @@ void Client::AsignTurns()
 }
 
 void Client::Waiting4Players() {
-	while (clients.size() < 4) {
-		if (selector->Wait()) {
-			if (selector->isReady(&listener->GetListener())) {
-				TCPSocket* client = new TCPSocket();
-				if (listener->Accept(client->GetSocket()) == sf::Socket::Done)
-				{
-					std::cout << "Connexion recibia de: " << client->GetRemotePort() << std::endl;
-					selector->Add(client->GetSocket());
-					client->SetID(clients.size() + 1);
-					clientMutex.lock();
-					clients.push_back(client);
-					clientMutex.unlock();
-					std::cout << "Hay " << clients.size() << " clientes conectados a este cliente." << std::endl;
+	Sleep(5000);
+		while (clients.size() < 4) {
+			if (selector->Wait()) {
+				if (selector->isReady(&listener->GetListener())) {
+					TCPSocket* client = new TCPSocket();
+					if (listener->Accept(client->GetSocket()) == sf::Socket::Done)
+					{
+						std::cout << "Connexion recibia de: " << client->GetRemotePort() << std::endl;
+						selector->Add(client->GetSocket());
+						client->SetID(clients.size() + 1);
+						clientMutex.lock();
+						clients.push_back(client);
+						clientMutex.unlock();
+						std::cout << "Hay " << clients.size() << " clientes conectados a este cliente." << std::endl;
+					}
+					else {
+						delete client;
+						std::cout << "Error al recibir un player." << std::endl;
+						exit(0);
+					}
 				}
-				else {
-					delete client;
-					std::cout << "Error al recibir un player." << std::endl;
-					exit(0);
-				}
+
 			}
-			
 		}
-	}
-	game = true;
+		game = true;
+
+	
+	
 }
 
 void Client::RecievingThread() {
@@ -369,7 +373,6 @@ void Client::RecievingThread() {
 
 				}
 				idPlayer = auxiliarNumOfPlayers;
-
 			default:
 				break;
 			}
@@ -386,6 +389,7 @@ LISTENER Client::GetTag(sf::Packet& packet) {
 	return StringToEnum(auxiliar);
 }
 
+
 void Client::ClientsListener() {
 	while (true) {
 		for (auto it : clients) {
@@ -400,6 +404,10 @@ void Client::ClientsListener() {
 						{
 						case READY:
 							ManageReady(packet, it);
+							break;
+
+						case PASAR_TURNO:
+							PasarTurno();
 							break;
 						}
 
@@ -431,7 +439,7 @@ void Client::ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CUL
 
 
 void Client::PasarTurno() {
-	int actualTurn = playerCards[0]->actualTurn;
+	int actualTurn = playerCards[idPlayer]->actualTurn;
 
 	for (int i = 0; i < playerCards.size();i++) {
 		if (actualTurn == 4) {
@@ -443,13 +451,30 @@ void Client::PasarTurno() {
 	}
 }
 
+void Client::SendPasarTurno() {
+	sf::Packet packet;
+	for (auto it : clients) {
+
+		packet << EnumToString(LISTENER::PASAR_TURNO);
+		status->SetStatus(it->Send(packet));
+		if (status->GetStatus() == sf::Socket::Done)
+		{
+			std::cout << "El paquete se ha enviado correctamente\n";
+			packet.clear();
+		}
+		else {
+			std::cout << "El paquete no se ha podido enviar\n";
+		}
+	}
+
+}
 void Client::ChooseCard() {
 	do
 	{
 		std::cout << "Elige jugador al que robar:(Numero) ";
 		std::cin >> player2Steal;
 		std::cout << std::endl;
-	} while (player2Steal >6);
+	} while (player2Steal >6&&idPlayer==player2Steal);
 	int auxCultura;
 	do
 	{
@@ -477,6 +502,7 @@ void Client::ChooseCard() {
 	else {
 		std::cout << "El jugador no tiene la carta";
 		PasarTurno();
+		SendPasarTurno();
 		ManageGame();
 
 	}
@@ -571,8 +597,8 @@ void Client::ManageGame() {
 		}
 	}
 	else {
-		std::cout << "Player id: "<<idPlayer << std::endl;
-		std::cout << "Actual Turn: " << playerCards[idPlayer]->actualTurn << std::endl;
+		//std::cout << "Player id: "<<idPlayer << std::endl;
+		//std::cout << "Actual Turn: " << playerCards[idPlayer]->actualTurn << std::endl;
 		Sleep(1000);
 	}
 }
@@ -629,6 +655,10 @@ std::string Client::EnumToString(LISTENER _listener) {
 		return "UNIRSE_PARTIDA";
 
 	}
+	else if (_listener == PASAR_TURNO) {
+		return "PASAR_TURNO";
+
+	}
 }
 LISTENER Client::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -651,5 +681,8 @@ LISTENER Client::StringToEnum(std::string _string) {
 	}
 	else if (_string == "UNIRSE_PARTIDA") {
 		return LISTENER::UNIRSE_PARTIDA;
+	}
+	else if (_string == "PASAR_TURNO") {
+		return LISTENER::PASAR_TURNO;
 	}
 }

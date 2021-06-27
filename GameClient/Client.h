@@ -53,6 +53,7 @@ public:
 	void ClientsListener();
 	void ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CULTURA _culture, MIEMBRO_FAMILIA _familia);
 	void PasarTurno();
+	void SendPasarTurno();
 	void ChooseCard();
 	void GetConnectedPlayers();
 	bool CheckPlayersReady();
