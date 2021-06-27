@@ -75,6 +75,8 @@ public:
 
 
 
+
+
 	void ManageGame();
 
 	void ClientLoop();
@@ -82,6 +84,16 @@ public:
 	std::string EnumToString(LISTENER _listener);
 
 	LISTENER StringToEnum(std::string _string);
+
+	CULTURA StringToCultura(std::string _string);
+
+	MIEMBRO_FAMILIA StringToFamilia(std::string _string);
+
+	std::string FamiliaToString(MIEMBRO_FAMILIA _familia);
+
+	std::string CulturaToString(CULTURA _cultura);
+
+
 
 };
 

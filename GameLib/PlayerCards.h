@@ -25,8 +25,8 @@ struct PlayerCards {
 	}
 
 	bool checkCard(Card _card) {
-		for (auto it : playerCards) {
-			if (it.cultura==_card.cultura&&it.familia==_card.familia) {
+		for (int i = 0;i < playerCards.size();i++) {
+			if (playerCards[i].cultura==_card.cultura&&playerCards[i].familia==_card.familia) {
 				return true;
 			}
 		}

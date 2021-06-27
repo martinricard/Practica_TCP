@@ -390,27 +390,44 @@ LISTENER Client::GetTag(sf::Packet& packet) {
 	return StringToEnum(auxiliar);
 }
 void Client::ManageCambioCarta(sf::Packet &packet) {
-	int idPlayer;
+	int idPlayerThief;
 	int idPlayer2Steal;
 	int cultura;
 	int familia;
-
+	
 	CULTURA _cultura;
 	MIEMBRO_FAMILIA _familia;
 	std::string auxiliar;
 	packet >> auxiliar;
-	idPlayer = std::stoi(auxiliar);
+	idPlayerThief = std::stoi(auxiliar);
+	auxiliar.clear();
 	packet >> auxiliar;
 	idPlayer2Steal = std::stoi(auxiliar);
+	auxiliar.clear();
+
 	packet >> auxiliar;
+
 	cultura = std::stoi(auxiliar);
 	_cultura = (CULTURA)cultura;
 
 	packet >> auxiliar;
 	familia = std::stoi(auxiliar);
 	_familia = (MIEMBRO_FAMILIA)familia;
-	ChangeCardsBetweenPlayers(idPlayer, idPlayer2Steal, _cultura, _familia);
+	if (idPlayer2Steal == idPlayer) {
+		std::cout << "El jugador " << idPlayerThief << "te pide " << CulturaToString(_cultura) << " " << FamiliaToString(_familia);
 
+		ChangeCardsBetweenPlayers(idPlayerThief, idPlayer2Steal, _cultura, _familia);
+
+		std::cout << "El jugador " << idPlayerThief << "te ha robado la carta"<<std::endl;
+
+			
+	}
+	else{
+		std::cout << "El jugador " << idPlayerThief << "le ha robado una carta a " << idPlayer2Steal;
+		ChangeCardsBetweenPlayers(idPlayerThief, idPlayer2Steal, _cultura, _familia);
+		
+
+	}
 }
 
 void Client::ClientsListener() {
@@ -529,6 +546,7 @@ void Client::ChooseCard() {
 	}
 	else {
 		std::cout << "El jugador no tiene la carta";
+		//SendCambioCarta(idPlayer, player2Steal, cultura, familia);
 		PasarTurno();
 		SendPasarTurno();
 		ManageGame();
@@ -633,7 +651,7 @@ void Client::SendCambioCarta(int _id,int playerToChange, CULTURA _cultura, MIEMB
 }
 
 void Client::ManageGame() {
-	if (idPlayer == playerCards[idPlayer]->actualTurn)
+	if (idPlayer == playerCards[0]->actualTurn)
 	{
 		if (playerCards[idPlayer]->isPlaying) {
 			system("cls");
@@ -646,16 +664,14 @@ void Client::ManageGame() {
 		}
 	}
 	else {
-		//std::cout << "Player id: "<<idPlayer << std::endl;
-		//std::cout << "Actual Turn: " << playerCards[idPlayer]->actualTurn << std::endl;
 		system("cls");
-		for (auto it : clients) {
-			std::cout << "Cliente CON ID: " << it->GetID()<<std::endl;
-				playerCards[it->GetID()]->PrintHand();
-				std::cout <<  std::endl;
 
-		}
-		Sleep(3000);
+		LineCout();
+		std::cout << "          MODO ESPECTADOR           ";
+		LineCout();
+		std::cout << "Esta jugando el jugador: " << playerCards[idPlayer]->actualTurn << std::endl;
+	
+		Sleep(7000);
 	}
 }
 
@@ -748,4 +764,101 @@ LISTENER Client::StringToEnum(std::string _string) {
 	else if (_string == "CAMBIO_CARTA") {
 		return LISTENER::CAMBIO_CARTA;
 	}
+}
+
+CULTURA Client::StringToCultura(std::string _string) {
+	if (_string == "ARABE") {
+		return CULTURA::ARABE;
+	}
+	else if (_string == "BANTU") {
+		return CULTURA::BANTU;
+	}
+	else if (_string == "CHINA") {
+		return CULTURA::CHINA;
+	}
+	else if (_string == "ESQUIMAL") {
+		return CULTURA::ESQUIMAL;
+	}
+	else if (_string == "INDIA") {
+		return CULTURA::INDIA;
+	}
+	else if (_string == "MEXICANA") {
+		return CULTURA::MEXICANA;
+	}
+	else if (_string == "TIROLESA") {
+		return CULTURA::TIROLESA;
+	}
+	
+}
+
+std::string Client::CulturaToString(CULTURA _cultura) {
+	if (_cultura == CULTURA::ARABE) {
+		return "ARABE";
+	}
+	else if (_cultura == CULTURA::BANTU) {
+		return "BANTU";
+	}
+	else if (_cultura == CULTURA::CHINA) {
+		return "CHINA";
+	}
+	else if (_cultura == CULTURA::ESQUIMAL) {
+		return "ESQUIMAL";
+	}
+	else if (_cultura == CULTURA::INDIA) {
+		return "INDIA";
+	}
+	else if (_cultura == CULTURA::MEXICANA) {
+		return "MEXICANA";
+	}
+	else if (_cultura == CULTURA::TIROLESA) {
+		return "TIROLESA";
+	}
+
+}
+
+
+MIEMBRO_FAMILIA Client::StringToFamilia(std::string _string) {
+	if (_string == "ABUELO") {
+		return MIEMBRO_FAMILIA::ABUELO;
+	}
+	else if (_string == "ABUELA") {
+		return MIEMBRO_FAMILIA::ABUELA;
+	}
+	else if (_string == "PADRE") {
+		return MIEMBRO_FAMILIA::PADRE;
+	}
+	else if (_string == "MADRE") {
+		return MIEMBRO_FAMILIA::MADRE;
+	}
+	else if (_string == "HIJO") {
+		return MIEMBRO_FAMILIA::HIJO;
+	}
+	else if (_string == "HIJA") {
+		return MIEMBRO_FAMILIA::HIJA;
+	}
+	
+
+}
+
+std::string Client::FamiliaToString(MIEMBRO_FAMILIA _familia) {
+	if (_familia == MIEMBRO_FAMILIA::ABUELO) {
+		return "ABUELO";
+	}
+	else if (_familia == MIEMBRO_FAMILIA::ABUELA) {
+		return "ABUELA";
+	}
+	else if (_familia == MIEMBRO_FAMILIA::PADRE) {
+		return "PADRE";
+	}
+	else if (_familia == MIEMBRO_FAMILIA::MADRE) {
+		return "MADRE";
+	}
+	else if (_familia == MIEMBRO_FAMILIA::HIJO) {
+		return "HIJO";
+	}
+	else if (_familia == MIEMBRO_FAMILIA::HIJA) {
+		return "HIJA";
+	}
+
+
 }
