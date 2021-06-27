@@ -346,6 +346,10 @@ std::string Server::EnumToString(LISTENER _listener) {
 		return "UNIRSE_PARTIDA";
 
 	}
+	else if (_listener == CAMBIO_CARTA) {
+		return "CAMBIO_CARTA";
+
+	}
 }
 LISTENER Server::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -368,5 +372,8 @@ LISTENER Server::StringToEnum(std::string _string) {
 	}
 	else if (_string == "UNIRSE_PARTIDA") {
 		return LISTENER::UNIRSE_PARTIDA;
+	}
+	else if (_string == "CAMBIO_CARTA") {
+		return LISTENER::CAMBIO_CARTA;
 	}
 }

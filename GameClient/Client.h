@@ -50,6 +50,7 @@ public:
 	void Waiting4Players();
 	void RecievingThread();
 	LISTENER GetTag(sf::Packet& packet);
+	void ManageCambioCarta(sf::Packet& packet);
 	void ClientsListener();
 	void ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CULTURA _culture, MIEMBRO_FAMILIA _familia);
 	void PasarTurno();
@@ -69,6 +70,10 @@ public:
 	void ConnectServer();
 
 	bool CheckCard(int _id, CULTURA _cultura, MIEMBRO_FAMILIA _familia);
+
+	void SendCambioCarta(int _id, int playerToChange, CULTURA _cultura, MIEMBRO_FAMILIA _familia);
+
+
 
 	void ManageGame();
 

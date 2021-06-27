@@ -242,7 +242,7 @@ void Client::AssignDeck()
 	system("cls");
 	deck = new Deck();
 	if (idPlayer == 0) {
-		seed = tcpSocket->GetRemotePort();
+		seed = tcpSocket->GetLocalPort();
 		deck->MixDeck(seed);
 	}
 	else {
@@ -254,6 +254,7 @@ void Client::AssignDeck()
 			}
 		}
 	}
+	std::cout << "El cliente con id " << idPlayer << " La seed es la siguiente: " << seed << std::endl;
 
 }
 
@@ -388,7 +389,29 @@ LISTENER Client::GetTag(sf::Packet& packet) {
 	packet >> auxiliar;
 	return StringToEnum(auxiliar);
 }
+void Client::ManageCambioCarta(sf::Packet &packet) {
+	int idPlayer;
+	int idPlayer2Steal;
+	int cultura;
+	int familia;
 
+	CULTURA _cultura;
+	MIEMBRO_FAMILIA _familia;
+	std::string auxiliar;
+	packet >> auxiliar;
+	idPlayer = std::stoi(auxiliar);
+	packet >> auxiliar;
+	idPlayer2Steal = std::stoi(auxiliar);
+	packet >> auxiliar;
+	cultura = std::stoi(auxiliar);
+	_cultura = (CULTURA)cultura;
+
+	packet >> auxiliar;
+	familia = std::stoi(auxiliar);
+	_familia = (MIEMBRO_FAMILIA)familia;
+	ChangeCardsBetweenPlayers(idPlayer, idPlayer2Steal, _cultura, _familia);
+
+}
 
 void Client::ClientsListener() {
 	while (true) {
@@ -409,7 +432,11 @@ void Client::ClientsListener() {
 						case PASAR_TURNO:
 							PasarTurno();
 							break;
+						case CAMBIO_CARTA:
+							ManageCambioCarta(packet);
+							break;
 						}
+
 
 
 					}
@@ -494,6 +521,7 @@ void Client::ChooseCard() {
 	if (CheckCard(player2Steal, cultura, familia)) {
 		std::cout << "El jugador tiene la carta";
 		ChangeCardsBetweenPlayers(idPlayer, player2Steal, cultura, familia);
+		SendCambioCarta(idPlayer, player2Steal, cultura, familia);
 		ManageGame();
 	
 	
@@ -583,7 +611,26 @@ bool Client::CheckCard(int _id, CULTURA _cultura, MIEMBRO_FAMILIA _familia) {
 	return playerCards[_id]->checkCard(*card);
 }
 
+void Client::SendCambioCarta(int _id,int playerToChange, CULTURA _cultura, MIEMBRO_FAMILIA _familia) {
+	sf::Packet packet;
+	for (auto it : clients) {
 
+		packet << EnumToString(LISTENER::CAMBIO_CARTA);
+		packet << std::to_string(_id);
+		packet << std::to_string(playerToChange);
+		packet << std::to_string((int)_cultura);
+		packet << std::to_string((int)_familia);
+		status->SetStatus(it->Send(packet));
+		if (status->GetStatus() == sf::Socket::Done)
+		{
+			std::cout << "El paquete se ha enviado correctamente\n";
+			packet.clear();
+		}
+		else {
+			std::cout << "El paquete no se ha podido enviar\n";
+		}
+	}
+}
 
 void Client::ManageGame() {
 	if (idPlayer == playerCards[idPlayer]->actualTurn)
@@ -592,14 +639,23 @@ void Client::ManageGame() {
 			system("cls");
 
 			std::cout << "Estas son tus cartas: " << std::endl;
+			
 			playerCards[idPlayer]->PrintHand();
+		
 			ChooseCard();
 		}
 	}
 	else {
 		//std::cout << "Player id: "<<idPlayer << std::endl;
 		//std::cout << "Actual Turn: " << playerCards[idPlayer]->actualTurn << std::endl;
-		Sleep(1000);
+		system("cls");
+		for (auto it : clients) {
+			std::cout << "Cliente CON ID: " << it->GetID()<<std::endl;
+				playerCards[it->GetID()]->PrintHand();
+				std::cout <<  std::endl;
+
+		}
+		Sleep(3000);
 	}
 }
 
@@ -659,6 +715,10 @@ std::string Client::EnumToString(LISTENER _listener) {
 		return "PASAR_TURNO";
 
 	}
+	else if (_listener == CAMBIO_CARTA) {
+		return "CAMBIO_CARTA";
+
+	}
 }
 LISTENER Client::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -684,5 +744,8 @@ LISTENER Client::StringToEnum(std::string _string) {
 	}
 	else if (_string == "PASAR_TURNO") {
 		return LISTENER::PASAR_TURNO;
+	}
+	else if (_string == "CAMBIO_CARTA") {
+		return LISTENER::CAMBIO_CARTA;
 	}
 }
