@@ -27,13 +27,16 @@ struct Client
 	std::map<int, PlayerCards*>playerCards;
 	
 	bool playerReady = false;
+	std::vector<std::string> aMensajes;
 
 	bool game = false;
 	std::mutex clientMutex;
 	bool gameBegin = false;
-
-
+	bool createdOrJoinAGame;
+	bool indicaciones = false;
+	int tamañoSala = 0;
 	int player2Steal;
+	bool waitingAnswer1, waitingAnswer2, waitingAnswer3;
 	CULTURA cultura;
 	MIEMBRO_FAMILIA familia;
 public:
@@ -51,9 +54,11 @@ public:
 	void RecievingThread();
 	LISTENER GetTag(sf::Packet& packet);
 	void ManageCambioCarta(sf::Packet& packet);
+	void ManageMessage(sf::Packet& packet);
 	void ClientsListener();
 	void ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CULTURA _culture, MIEMBRO_FAMILIA _familia);
 	void PasarTurno();
+	void InterfazChat();
 	void SendPasarTurno();
 	void ChooseCard();
 	void GetConnectedPlayers();

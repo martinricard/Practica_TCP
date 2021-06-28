@@ -89,7 +89,7 @@ void Client::CheckPlayersReady2() {
 
 }
 void Client::JoinOrCreateRoom() {//Envia los paquetes
-	bool createdOrJoinAGame = false;
+	createdOrJoinAGame = false;
 	while (createdOrJoinAGame==false)
 	{
 
@@ -115,6 +115,7 @@ void Client::JoinOrCreateRoom() {//Envia los paquetes
 			std::cout << std::endl << "Quieres poner contraseña?(s/n): ";
 			std::cin >> message;
 			if (message == "s") {
+				packet << message;
 				std::cout << std::endl << "Indica la contraseña?: ";
 				std::cin >> contraseña;
 				packet << contraseña;
@@ -127,6 +128,7 @@ void Client::JoinOrCreateRoom() {//Envia los paquetes
 				createdOrJoinAGame = true;
 
 			}
+			tamañoSala = std::stoi(numeroJugadores);
 		}
 		else if (message == "b") {
 			std::string numOfPlayers;
@@ -261,7 +263,7 @@ void Client::AssignDeck()
 void Client::AsignTurns()
 {
 	//ESTE 5 SERAN LOS NUMEROS DE JUGADORES QUE HAY EN LA PARTIDA
-	for (int i = 0;i < 5;i++) {
+	for (int i = 0;i < tamañoSala;i++) {
 		playerCards[i] = new PlayerCards();
 		playerCards[i]->actualTurn = 0;
 		playerCards[i]->isPlaying = true;
@@ -269,18 +271,44 @@ void Client::AsignTurns()
 	}
 
 	for (int i = 0; i < deck->deck.size();i++) {
-		if (i <= 7)playerCards[0]->giveCard(*deck->deck[i]);
-		else if(i>7&&i<=14)playerCards[1]->giveCard(*deck->deck[i]);
-		else if(i>14&&i<=21)playerCards[2]->giveCard(*deck->deck[i]);
-		else if(i>21&&i<=28)playerCards[3]->giveCard(*deck->deck[i]);
-		else playerCards[4]->giveCard(*deck->deck[i]);
+		if (tamañoSala == 3) {
+			if (i <= 14)playerCards[0]->giveCard(*deck->deck[i]);
+			else if (i > 14 && i <= 28)playerCards[1]->giveCard(*deck->deck[i]);
+			else playerCards[2]->giveCard(*deck->deck[i]);
 		
+		}
+		else if (tamañoSala == 4) {
+			if (i <= 10)playerCards[0]->giveCard(*deck->deck[i]);
+			else if (i > 10 && i <= 20)playerCards[1]->giveCard(*deck->deck[i]);
+			else if (i > 20 && i <= 30)playerCards[2]->giveCard(*deck->deck[i]);
+			else playerCards[3]->giveCard(*deck->deck[i]);
+		}
+
+		else if (tamañoSala == 5) {
+			if (i <= 7)playerCards[0]->giveCard(*deck->deck[i]);
+			else if (i > 7 && i <= 14)playerCards[1]->giveCard(*deck->deck[i]);
+			else if (i > 14 && i <= 21)playerCards[2]->giveCard(*deck->deck[i]);
+			else if (i > 21 && i <= 28)playerCards[3]->giveCard(*deck->deck[i]);
+			else playerCards[4]->giveCard(*deck->deck[i]);
+		}
+
+		else if (tamañoSala == 6) {
+			if (i <= 7)playerCards[0]->giveCard(*deck->deck[i]);
+			else if (i > 7 && i <= 14)playerCards[1]->giveCard(*deck->deck[i]);
+			else if (i > 14 && i <= 21)playerCards[2]->giveCard(*deck->deck[i]);
+			else if (i > 21 && i <= 28)playerCards[3]->giveCard(*deck->deck[i]);
+			else if (i > 28 && i <= 35)playerCards[4]->giveCard(*deck->deck[i]);
+
+			else playerCards[5]->giveCard(*deck->deck[i]);
+		}
 	}
+	std::thread chat(&Client::InterfazChat, this);
+	chat.detach();
 }
 
 void Client::Waiting4Players() {
-	Sleep(5000);
-		while (clients.size() < 4) {
+	Sleep(7000);
+		while (clients.size() < tamañoSala - 1 ) {
 			if (selector->Wait()) {
 				if (selector->isReady(&listener->GetListener())) {
 					TCPSocket* client = new TCPSocket();
@@ -292,6 +320,7 @@ void Client::Waiting4Players() {
 						clientMutex.lock();
 						clients.push_back(client);
 						clientMutex.unlock();
+					
 						std::cout << "Hay " << clients.size() << " clientes conectados a este cliente." << std::endl;
 					}
 					else {
@@ -329,6 +358,8 @@ void Client::RecievingThread() {
 			std::string numeroJugadoresPartida;
 			std::string stringPort;
 			std::string numOfPlayers;
+			std::string auxiliar;
+			int sala;
 			int auxiliarNumOfPlayers;
 			switch (tag)
 			{
@@ -347,7 +378,13 @@ void Client::RecievingThread() {
 				}
 				break;
 				case ENVIAR_CLIENTESACTUALES:
-				
+					createdOrJoinAGame = true;
+					if (tamañoSala == 0) {
+
+						packet >> auxiliar;
+						sala = std::stoi(auxiliar);
+						tamañoSala = sala;
+					}
 				packet >> numOfPlayers;
 				auxiliarNumOfPlayers = std::stoi(numOfPlayers);
 			
@@ -364,6 +401,7 @@ void Client::RecievingThread() {
 						std::cout << "Se ha conectado con el cliente " << port << std::endl;
 						clients.push_back(client);
 						selector->Add(client->GetSocket());
+						
 						getClients = true;
 
 					}
@@ -374,6 +412,7 @@ void Client::RecievingThread() {
 
 				}
 				idPlayer = auxiliarNumOfPlayers;
+				
 			default:
 				break;
 			}
@@ -429,7 +468,11 @@ void Client::ManageCambioCarta(sf::Packet &packet) {
 
 	}
 }
-
+void Client::ManageMessage(sf::Packet& packet) {
+	std::string message;
+	packet >> message;
+	aMensajes.push_back(message);
+}
 void Client::ClientsListener() {
 	while (true) {
 		for (auto it : clients) {
@@ -452,6 +495,8 @@ void Client::ClientsListener() {
 						case CAMBIO_CARTA:
 							ManageCambioCarta(packet);
 							break;
+						case MESSAGE:
+							ManageMessage(packet);
 						}
 
 
@@ -486,7 +531,7 @@ void Client::PasarTurno() {
 	int actualTurn = playerCards[idPlayer]->actualTurn;
 
 	for (int i = 0; i < playerCards.size();i++) {
-		if (actualTurn == 4) {
+		if (actualTurn == tamañoSala-1) {
 			playerCards[i]->actualTurn = 0;
 		}
 		else {
@@ -495,6 +540,594 @@ void Client::PasarTurno() {
 	}
 }
 
+void Client::InterfazChat() {
+
+	sf::Vector2i screenDimensions(800, 600);
+
+	sf::RenderWindow window;
+	window.create(sf::VideoMode(screenDimensions.x, screenDimensions.y), "Chat");
+
+	sf::Font font;
+	if (!font.loadFromFile("courbd.ttf"))
+	{
+		std::cout << "Can't load the font file" << std::endl;
+	}
+
+	sf::String mensaje = " >";
+
+	sf::Text chattingText(mensaje, font, 14);
+	chattingText.setFillColor(sf::Color(0, 160, 0));
+	chattingText.setStyle(sf::Text::Bold);
+
+
+	sf::Text text(mensaje, font, 14);
+	text.setFillColor(sf::Color(0, 160, 0));
+	text.setStyle(sf::Text::Bold);
+	text.setPosition(0, 560);
+
+	sf::RectangleShape separator(sf::Vector2f(800, 5));
+	separator.setFillColor(sf::Color(200, 200, 200, 255));
+	separator.setPosition(0, 550);
+
+	while (window.isOpen())
+	{
+		sf::Event evento;
+		if (!indicaciones) {
+			indicaciones = true;
+			std::string id = std::to_string(idPlayer);
+			id = "Eres el id " + id;
+			aMensajes.push_back(id);
+			aMensajes.push_back("Q - BUENOS DIAS A TODOS  |  W - VAIS A PERDER  |  E - GG EZ");
+
+		}
+
+		while (window.pollEvent(evento))
+		{
+			switch (evento.type)
+			{
+			case sf::Event::Closed:
+				window.close();
+				break;
+			case sf::Event::KeyPressed:
+				if (evento.key.code == sf::Keyboard::Escape)
+					window.close();
+				else if (evento.key.code == sf::Keyboard::Return)
+				{
+					aMensajes.push_back(mensaje);
+					if (aMensajes.size() > 25)
+					{
+						aMensajes.erase(aMensajes.begin(), aMensajes.begin() + 1);
+					}
+					mensaje = ">";
+				}
+				else if (evento.key.code == sf::Keyboard::Q)
+				{
+					aMensajes.push_back("BUENOS DIAS(T para todos o marca el id del jugador");
+					waitingAnswer1 = true;
+					waitingAnswer2 = false;
+					waitingAnswer3 = false;
+
+				}
+				else if (evento.key.code == sf::Keyboard::W)
+				{
+					aMensajes.push_back("VAS A PERDER(T para todos o marca el id del jugador");
+					waitingAnswer1 = false;
+					waitingAnswer2 = true;
+					waitingAnswer3 = false;
+
+				}
+				else if (evento.key.code == sf::Keyboard::E)
+				{
+					aMensajes.push_back("GG EZ(T para todos o marca el id del jugador");
+					waitingAnswer1 = false;
+					waitingAnswer2 = false;
+					waitingAnswer3 = true;
+				}
+				else if (evento.key.code == sf::Keyboard::T) {
+					if (waitingAnswer1 == true) {
+						sf::Packet packet;
+						aMensajes.push_back("Se ha enviado BUENOS DIAS a todos");
+
+						for (auto it : clients) {
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "BUENOS DIAS";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+
+					}
+					else if (waitingAnswer2 == true) {
+						sf::Packet packet;
+						aMensajes.push_back("Se ha enviado VAS A PERDER a todos");
+
+						for (auto it : clients) {
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "VAS A PERDER";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+					else if (waitingAnswer3 == true) {
+						sf::Packet packet;
+						aMensajes.push_back("Se ha enviado GG EZ a todos");
+
+						for (auto it : clients) {
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "GG EZ";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+					waitingAnswer1 = false;
+					waitingAnswer2 = false;
+					waitingAnswer3 = false;
+				}
+				else if (evento.key.code == sf::Keyboard::Num0&&idPlayer!=0) {
+					if (waitingAnswer1 == true) {
+						sf::Packet packet;
+
+						for (auto it : clients) {
+							if (it->GetID() == 0) {
+								aMensajes.push_back("Se ha enviado BUENOS DIAS a 0");
+
+								packet << EnumToString(LISTENER::MESSAGE);
+								packet << "BUENOS DIAS";
+								status->SetStatus(it->Send(packet));
+								if (status->GetStatus() == sf::Socket::Done)
+								{
+									std::cout << "El paquete se ha enviado correctamente\n";
+									packet.clear();
+								}
+								else {
+									std::cout << "El paquete no se ha podido enviar\n";
+								}
+							}
+						}
+
+					}
+					else if (waitingAnswer2 == true) {
+						sf::Packet packet;
+
+						for (auto it : clients) {
+							if (it->GetID() == 0) {
+								aMensajes.push_back("Se ha enviado VAS A PERDER al jugador 0");
+
+								packet << EnumToString(LISTENER::MESSAGE);
+								packet << "VAS A PERDER";
+								status->SetStatus(it->Send(packet));
+								if (status->GetStatus() == sf::Socket::Done)
+								{
+									std::cout << "El paquete se ha enviado correctamente\n";
+									packet.clear();
+								}
+								else {
+									std::cout << "El paquete no se ha podido enviar\n";
+								}
+							}
+						}
+					}
+					else if (waitingAnswer3 == true) {
+						sf::Packet packet;
+
+						for (auto it : clients) {
+							if (it->GetID() == 0) {
+								aMensajes.push_back("Se ha enviado GG EZ al jugador 0");
+
+								packet << EnumToString(LISTENER::MESSAGE);
+								packet << "GG EZ";
+								status->SetStatus(it->Send(packet));
+								if (status->GetStatus() == sf::Socket::Done)
+								{
+									std::cout << "El paquete se ha enviado correctamente\n";
+									packet.clear();
+								}
+								else {
+									std::cout << "El paquete no se ha podido enviar\n";
+								}
+							}
+						}
+					}
+					waitingAnswer1 = false;
+					waitingAnswer2 = false;
+					waitingAnswer3 = false;
+				}
+				else if (evento.key.code == sf::Keyboard::Num1 && idPlayer != 1) {
+				if (waitingAnswer1 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 1) {
+							aMensajes.push_back("Se ha enviado BUENOS DIAS a 1");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "BUENOS DIAS";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+
+				}
+				else if (waitingAnswer2 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 1) {
+							aMensajes.push_back("Se ha enviado VAS A PERDER al jugador 1");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "VAS A PERDER";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				else if (waitingAnswer3 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 1) {
+							aMensajes.push_back("Se ha enviado GG EZ al jugador 1");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "GG EZ";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				waitingAnswer1 = false;
+				waitingAnswer2 = false;
+				waitingAnswer3 = false;
+				}
+				else if (evento.key.code == sf::Keyboard::Num2 && idPlayer != 2) {
+				if (waitingAnswer1 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 2) {
+							aMensajes.push_back("Se ha enviado BUENOS DIAS a 2");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "BUENOS DIAS";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+
+				}
+				else if (waitingAnswer2 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 2) {
+							aMensajes.push_back("Se ha enviado VAS A PERDER al jugador 2");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "VAS A PERDER";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				else if (waitingAnswer3 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 2) {
+							aMensajes.push_back("Se ha enviado GG EZ al jugador 2");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "GG EZ";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				waitingAnswer1 = false;
+				waitingAnswer2 = false;
+				waitingAnswer3 = false;
+				}
+				else if (evento.key.code == sf::Keyboard::Num3 && tamañoSala >=4 && idPlayer != 3) {
+				if (waitingAnswer1 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 3) {
+							aMensajes.push_back("Se ha enviado BUENOS DIAS a 3");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "BUENOS DIAS";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+
+				}
+				else if (waitingAnswer2 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 3) {
+							aMensajes.push_back("Se ha enviado VAS A PERDER al jugador 3");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "VAS A PERDER";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				else if (waitingAnswer3 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 3) {
+							aMensajes.push_back("Se ha enviado GG EZ al jugador 3");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "GG EZ";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				waitingAnswer1 = false;
+				waitingAnswer2 = false;
+				waitingAnswer3 = false;
+				}
+				else if (evento.key.code == sf::Keyboard::Num4 && tamañoSala >= 5 && idPlayer != 4) {
+				if (waitingAnswer1 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 4) {
+							aMensajes.push_back("Se ha enviado BUENOS DIAS a 4");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "BUENOS DIAS";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+
+				}
+				else if (waitingAnswer2 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 4) {
+							aMensajes.push_back("Se ha enviado VAS A PERDER al jugador 4");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "VAS A PERDER";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				else if (waitingAnswer3 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 4) {
+							aMensajes.push_back("Se ha enviado GG EZ al jugador 4");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "GG EZ";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				waitingAnswer1 = false;
+				waitingAnswer2 = false;
+				waitingAnswer3 = false;
+				}
+				else if (evento.key.code == sf::Keyboard::Num5 && tamañoSala >= 6 && idPlayer != 5) {
+				if (waitingAnswer1 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 5) {
+							aMensajes.push_back("Se ha enviado BUENOS DIAS a 5");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "BUENOS DIAS";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+
+				}
+				else if (waitingAnswer2 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 5) {
+							aMensajes.push_back("Se ha enviado VAS A PERDER al jugador 5");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "VAS A PERDER";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				else if (waitingAnswer3 == true) {
+					sf::Packet packet;
+
+					for (auto it : clients) {
+						if (it->GetID() == 5) {
+							aMensajes.push_back("Se ha enviado GG EZ al jugador 5");
+
+							packet << EnumToString(LISTENER::MESSAGE);
+							packet << "GG EZ";
+							status->SetStatus(it->Send(packet));
+							if (status->GetStatus() == sf::Socket::Done)
+							{
+								std::cout << "El paquete se ha enviado correctamente\n";
+								packet.clear();
+							}
+							else {
+								std::cout << "El paquete no se ha podido enviar\n";
+							}
+						}
+					}
+				}
+				waitingAnswer1 = false;
+				waitingAnswer2 = false;
+				waitingAnswer3 = false;
+				}
+				break;
+			case sf::Event::TextEntered:
+				if (evento.text.unicode >= 32 && evento.text.unicode <= 126)
+					mensaje += (char)evento.text.unicode;
+				else if (evento.text.unicode == 8 && mensaje.getSize() > 0)
+					mensaje.erase(mensaje.getSize() - 1, mensaje.getSize());
+				break;
+			}
+		}
+		window.draw(separator);
+		for (size_t i = 0; i < aMensajes.size(); i++)
+		{
+			std::string chatting = aMensajes[i];
+			chattingText.setPosition(sf::Vector2f(0, 20 * i));
+			chattingText.setString(chatting);
+			window.draw(chattingText);
+		}
+		std::string mensaje_ = mensaje + "_";
+		text.setString(mensaje_);
+		window.draw(text);
+
+
+		window.display();
+		window.clear();
+	}
+
+
+}
 void Client::SendPasarTurno() {
 	sf::Packet packet;
 	for (auto it : clients) {
@@ -678,6 +1311,7 @@ void Client::ManageGame() {
 
 void Client::ClientLoop()
 {
+
 	ConnectServer();
 	std::thread recievingThread(&Client::RecievingThread, this);
 	recievingThread.detach();
@@ -735,6 +1369,10 @@ std::string Client::EnumToString(LISTENER _listener) {
 		return "CAMBIO_CARTA";
 
 	}
+	else if (_listener == MESSAGE) {
+		return "MESSAGE";
+
+	}
 }
 LISTENER Client::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -763,6 +1401,9 @@ LISTENER Client::StringToEnum(std::string _string) {
 	}
 	else if (_string == "CAMBIO_CARTA") {
 		return LISTENER::CAMBIO_CARTA;
+	}
+	else if (_string == "MESSAGE") {
+		return LISTENER::MESSAGE;
 	}
 }
 

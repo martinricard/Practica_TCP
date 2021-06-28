@@ -235,6 +235,9 @@ void Server::SendClients(TCPSocket& socket, Match partida) {
 	std::string stringPort;
 	std::string tag = EnumToString(ENVIAR_CLIENTESACTUALES);
 	packet << tag;
+	if (partida.clients.size() != 0) {
+		packet << std::to_string(partida.clients[0]->numeroJugadores);
+	}
 	packet << std::to_string(partida.clients.size());
 
 	for (auto it : partida.clients) {
