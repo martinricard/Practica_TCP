@@ -2,7 +2,7 @@
 const int SERVER_PORT = 50000;
 const int NUM_CULTURA = 7;
 const int NUM_FAMILIA = 6;
-const int TURN_DURATION = 20;
+const int TURN_DURATION = 30;
 enum class CULTURA
 {
 	ARABE,

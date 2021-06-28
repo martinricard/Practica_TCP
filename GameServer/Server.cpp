@@ -19,36 +19,8 @@ Server::~Server()
 }
 
 
-void Server::SendNewClient(TCPSocket& socket) {
-	sf::Packet packet;
-	unsigned short port = socket.GetRemotePort();;
-	std::string stringPort = std::to_string(port);;
-	
 
-	for (auto it : clients) {
-		packet << EnumToString(ENVIAR_NUEVOCLIENTE);
-		packet << stringPort;
-		status->SetStatus(it->Send(packet));
-		if (status->GetStatus() == sf::Socket::Done) {
-			std::cout << "El paquete de enviar clientes se ha enviado correctamente" << std::endl;
-			packet.clear();
-		}
-		else if(status->GetStatus()==sf::Socket::Disconnected) {
-			selector->Remove(it->GetSocket());
-			int aux;
-			for (int i = 0;i < clients.size();i++) {
-				if (clients[i]->GetRemotePort() == it->GetRemotePort()) {
-					aux = i;
-				}
-			}
-			clients.erase(clients.begin() + aux);
-			std::cout << "SE HA DESCONECTADO UN CLIENTE " << std::endl;
-			
-		}
-
-	}
-}
-
+//Thread de esucha del servidor
 void Server::RecievingThread() {
 	while (true) {
 		if (clients.size() != 0) {
@@ -196,25 +168,7 @@ void Server::RecievingThread() {
 
 
 							}
-							/*else if (auxiliar == "u") {
-								packet.clear();
-								std::cout << "ENTRAMOS2";
-								packet << EnumToString(LISTENER::DATOS_PARTIDA);
-								if (partidas.size() != 0) {
-									std::cout << "ENTRAMOS3";
-
-									packet << std::to_string(partidas.size());
-									for (auto it2 : partidas) {
-										packet << it2->clients[0]->nombreSala;
-										packet << std::to_string(it2->clients.size());
-										packet << it2->clients[0]->numeroJugadores;
-
-									}
-									it->Send(packet);
-								}
-							}
-						}
-					}*/
+							
 
 						}
 					}
@@ -228,7 +182,7 @@ void Server::RecievingThread() {
 
 
 
-
+//Envia los clientes 
 void Server::SendClients(TCPSocket& socket, Match partida) {
 	sf::Packet packet;
 	unsigned short port;
@@ -259,6 +213,7 @@ void Server::SendClients(TCPSocket& socket, Match partida) {
 	}
 }
 
+
 void Server::ServerListener() {
 
 	status->SetStatus(listener->Listen(50000, sf::IpAddress::LocalHost));
@@ -276,6 +231,7 @@ void Server::ServerListener() {
 	}
 
 }
+
 //Server Loop
 void Server::ControlServidor()
 {
@@ -354,6 +310,7 @@ std::string Server::EnumToString(LISTENER _listener) {
 
 	}
 }
+
 LISTENER Server::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
 		return ENVIAR_CLIENTESACTUALES;

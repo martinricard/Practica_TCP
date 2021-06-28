@@ -15,9 +15,6 @@ Client::~Client()
 }
 
 
-//Cuando el cliente recibe un manageChallenge_Q, lo recibe, solucionar el challenge se hace en la parte donde recibe el paquete
-
-
 void Client::LineCout() {
 	std::cout << std::endl<<"-------------------------------------------------------------" << std::endl;
 
@@ -30,36 +27,8 @@ static float GetRandomFloat() {
 	static std::uniform_real_distribution<float> dis(0.f, 1.f);
 	return dis(gen);
 }
-bool Client::CheckPlayersReady() {
-		LineCout();
-		bool ready = true;
-		system("cls");
-		if (!playerReady) {
-			ready = false;
-		}
-		for (auto it : clients) {
-			if (it->GetReady()) {
-				std::cout << "El jugador " << it->GetLocalPort() << " esta ready";
-			}
-			else{
-				std::cout << "El jugador " << it->GetLocalPort() << " no esta ready";
-				ready = false;
-			}
-		}
-		if (ready) {
-			LineCout();
-			std::cout << "            TODOS ESTAN READY";
-			LineCout();
 
-			gameBegin = true;
-
-		}
-		return ready;
-
-
-
-	
-}
+//Comprueba si los jugadores estan ready, cuando todos estan ready empieza el game
 void Client::CheckPlayersReady2() {
 	LineCout();
 	bool ready = true;
@@ -69,10 +38,10 @@ void Client::CheckPlayersReady2() {
 	}
 	for (auto it : clients) {
 		if (it->GetReady()) {
-			std::cout << "El jugador " << it->GetLocalPort() << " esta ready";
+			std::cout << "El jugador " << it->GetLocalPort() << " esta ready"<<std::endl;
 		}
 		else {
-			std::cout << "El jugador " << it->GetLocalPort() << " no esta ready";
+			std::cout << "El jugador " << it->GetLocalPort() << " no esta ready" << std::endl;
 			ready = false;
 		}
 	}
@@ -80,7 +49,7 @@ void Client::CheckPlayersReady2() {
 		LineCout();
 		std::cout << "            TODOS ESTAN READY";
 		LineCout();
-
+		Sleep(3000);
 		gameBegin = true;
 
 	}
@@ -89,6 +58,8 @@ void Client::CheckPlayersReady2() {
 
 
 }
+
+//Crea, busca o se une en un game
 void Client::JoinOrCreateRoom() {//Envia los paquetes
 	createdOrJoinAGame = false;
 	while (createdOrJoinAGame==false)
@@ -166,9 +137,7 @@ void Client::JoinOrCreateRoom() {//Envia los paquetes
 	} 
 }
 
-
-
-
+//Seteamos los players a ready
 void Client::ManageReady(sf::Packet &packet, TCPSocket* _tcpSocket) {
 	for (auto it : clients) {
 		if (it->GetRemotePort() == _tcpSocket->GetRemotePort()) {
@@ -177,6 +146,8 @@ void Client::ManageReady(sf::Packet &packet, TCPSocket* _tcpSocket) {
 	}
 	CheckPlayersReady2();
 }
+
+//Muestra por pantalla si esta ready
 void Client::checkReady() {
 	if (!playerReady) {
 		std::string message;
@@ -207,39 +178,7 @@ void Client::checkReady() {
 
 }
 
-
-
-
-		
-/*
-void Client::SendingThread() {//Envia los paquetes
-	sf::Packet packet;
-	sf::IpAddress ip = sf::IpAddress::LocalHost;
-	unsigned short port = SERVER_PORT;//Modificar este magic number
-	std::string message;
-	while (true)
-	{
-		if (protocolConnected) {
-			std::cout << std::endl << "Escribe el mensaje que quieras enviar: ";
-			std::cin >> message;
-			packet.clear();
-
-			if (tcpSocket->tcpStatus == sf::Socket::Done) {
-				std::cout << std::endl << "Se ha enviado: " << message << std::endl;
-				packet.clear();
-
-				message = "";
-				//std::cout << std::endl << "Escribe el mensaje que quieras enviar: ";
-
-			}
-			else {
-				std::cout << "Ha habido un error enviando el paquete";
-			}
-		}
-	
-	}
-}
-*/
+//Asignamos la baraja
 void Client::AssignDeck()
 {
 	system("cls");
@@ -261,6 +200,7 @@ void Client::AssignDeck()
 
 }
 
+//Asignamos turnos
 void Client::AsignTurns()
 {
 	//ESTE 5 SERAN LOS NUMEROS DE JUGADORES QUE HAY EN LA PARTIDA
@@ -309,6 +249,7 @@ void Client::AsignTurns()
 	timer.detach();
 }
 
+//Esperamos los jugadores
 void Client::Waiting4Players() {
 	Sleep(7000);
 		while (clients.size() < tamañoSala - 1 ) {
@@ -341,6 +282,7 @@ void Client::Waiting4Players() {
 	
 }
 
+//Thread que recibe paquetes del server
 void Client::RecievingThread() {
 	while (!this->getClients) {
 		sf::Packet packet;
@@ -424,13 +366,14 @@ void Client::RecievingThread() {
 		}
 	}
 
-
-
+//Devolvemos el tag del paquete
 LISTENER Client::GetTag(sf::Packet& packet) {
 	std::string auxiliar;
 	packet >> auxiliar;
 	return StringToEnum(auxiliar);
 }
+
+//Controlamos el cambio de carta
 void Client::ManageCambioCarta(sf::Packet &packet) {
 	int idPlayerThief;
 	int idPlayer2Steal;
@@ -440,8 +383,9 @@ void Client::ManageCambioCarta(sf::Packet &packet) {
 	CULTURA _cultura;
 	MIEMBRO_FAMILIA _familia;
 	std::string auxiliar;
-	packet >> auxiliar;
-	idPlayerThief = std::stoi(auxiliar);
+	std::string mensajeId;
+	packet >> mensajeId;
+	idPlayerThief = std::stoi(mensajeId);
 	auxiliar.clear();
 	packet >> auxiliar;
 	idPlayer2Steal = std::stoi(auxiliar);
@@ -456,33 +400,50 @@ void Client::ManageCambioCarta(sf::Packet &packet) {
 	familia = std::stoi(auxiliar);
 	_familia = (MIEMBRO_FAMILIA)familia;
 	if (idPlayer2Steal == idPlayer) {
-		std::cout << "El jugador " << idPlayerThief << "te pide " << CulturaToString(_cultura) << " " << FamiliaToString(_familia);
+		std::string a = "El jugador ";
+		std::string b = " te pide ";
+		std::string c = " " ;
+
+		aMensajes.push_back(a+mensajeId+b+ CulturaToString(_cultura) +c+ FamiliaToString(_familia));
 
 		ChangeCardsBetweenPlayers(idPlayerThief, idPlayer2Steal, _cultura, _familia);
+		a = "El jugador " + std::to_string(idPlayerThief);
+		aMensajes.push_back(a + "te ha robado la carta");
 
-		std::cout << "El jugador " << idPlayerThief << "te ha robado la carta"<<std::endl;
 
 			
 	}
 	else{
-		std::cout << "El jugador " << idPlayerThief << "le ha robado una carta a " << idPlayer2Steal;
+		std::string a = "El jugador " + idPlayerThief;
+		std::string b = "le ha robado una carta a " + idPlayer2Steal;
+		aMensajes.push_back(a+b);
+
 		ChangeCardsBetweenPlayers(idPlayerThief, idPlayer2Steal, _cultura, _familia);
 		
 
 	}
 }
+
+//Controlamos el recibimiento de un mensaje
 void Client::ManageMessage(sf::Packet& packet) {
 	std::string message;
 	packet >> message;
 	aMensajes.push_back(message);
 }
+
+//Controlamos si un jugador ha dicho que se acaba el game
 void Client::ManageFinish(sf::Packet& packet) {
 	std::string id, points;
 	packet >> id;
 	packet >> points;
-	std::cout << "El jugador " << id << " ha ganado con " << points << std::endl;
+	aMensajes.push_back("El jugador " + id + " ha ganado con " + points);
+	Sleep(5000);
 	gameBegin = false;
+	game = false;
+	exit(0);
 }
+
+//Thread que recibe paquetes de los peers
 void Client::ClientsListener() {
 	while (true) {
 		for (auto it : clients) {
@@ -531,6 +492,8 @@ void Client::ClientsListener() {
 		}
 	}
 }
+
+//Chequeamos si la partida ha terminado
 void Client::CheckFinish() {
 	int playersPlaying = 0;
 	int cultureCompleted = 0;
@@ -541,39 +504,7 @@ void Client::CheckFinish() {
 		cultureCompleted += it.second->puntuacion;
 	}
 	if (playersPlaying <= 2) {
-		std::cout << "Solo quedan dos jugadores" << std::endl;
-		std::cout << "El ganador es: ";
-		int _id =0;
-		int winnerPoints =0;
-		for (auto it : playerCards) {
-			if (it.second->puntuacion > winnerPoints) {
-				_id = it.first;
-				winnerPoints = it.second->puntuacion;
-			}
-		}
-		std::cout << _id << " con " << winnerPoints << " puntos.";
-		sf::Packet packet;
-		for (auto it : clients) {
-
-			packet << EnumToString(LISTENER::FINISH);
-			packet << std::to_string(_id);
-			packet << std::to_string(winnerPoints);
-			status->SetStatus(it->Send(packet));
-			if (status->GetStatus() == sf::Socket::Done)
-			{
-				std::cout << "El paquete se ha enviado correctamente\n";
-				packet.clear();
-			}
-			else {
-				std::cout << "El paquete no se ha podido enviar\n";
-			}
-		}
-		gameBegin = false;
-		Sleep(7000);
-	}
-	else if (cultureCompleted == 7) {
-		std::cout << "Se han completado todas las familias." << std::endl;
-		std::cout << "El ganador es: ";
+		aMensajes.push_back("Han quedado dos jugadores.");
 		int _id = 0;
 		int winnerPoints = 0;
 		for (auto it : playerCards) {
@@ -582,7 +513,9 @@ void Client::CheckFinish() {
 				winnerPoints = it.second->puntuacion;
 			}
 		}
-		std::cout << _id << " con " << winnerPoints << " puntos.";
+		std::string aux = "El ganador es" + std::to_string(_id);
+		std::string aux2 = " con " + std::to_string(winnerPoints);
+		aMensajes.push_back(aux + aux2);
 		sf::Packet packet;
 		for (auto it : clients) {
 
@@ -599,10 +532,49 @@ void Client::CheckFinish() {
 				std::cout << "El paquete no se ha podido enviar\n";
 			}
 		}
-		gameBegin = false;
+
 		Sleep(7000);
+		gameBegin = false;
+		game = false;
+		exit(0);
+	}
+	else if (cultureCompleted == 7) {
+		aMensajes.push_back("Se han completado todas las familias.");
+		int _id = 0;
+		int winnerPoints = 0;
+		for (auto it : playerCards) {
+			if (it.second->puntuacion > winnerPoints) {
+				_id = it.first;
+				winnerPoints = it.second->puntuacion;
+			}
+		}
+		std::string aux = "El ganador es"+ std::to_string(_id) ;
+		std::string aux2 = " con " + std::to_string(winnerPoints);
+		aMensajes.push_back(aux + aux2);
+		sf::Packet packet;
+		for (auto it : clients) {
+
+			packet << EnumToString(LISTENER::FINISH);
+			packet << std::to_string(_id);
+			packet << std::to_string(winnerPoints);
+			status->SetStatus(it->Send(packet));
+			if (status->GetStatus() == sf::Socket::Done)
+			{
+				std::cout << "El paquete se ha enviado correctamente\n";
+				packet.clear();
+			}
+			else {
+				std::cout << "El paquete no se ha podido enviar\n";
+			}
+		}
+	
+		Sleep(7000);
+		gameBegin = false;
+		game = false;
 	}
 }
+
+//Cambio de cartas entre dos players
 void Client::ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CULTURA _culture, MIEMBRO_FAMILIA _familia) {
 	Card* card = new Card(_culture, _familia);
 	playerCards[_actualPlayer]->giveCard(*card);
@@ -611,7 +583,7 @@ void Client::ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CUL
 
 }
 
-
+//El jugador cambia el turno localmente
 void Client::PasarTurno() {
 	int actualTurn = 0;
 
@@ -630,6 +602,7 @@ void Client::PasarTurno() {
 	 
 }
 
+//Interfaz para el chat
 void Client::InterfazChat() {
 
 	sf::Vector2i screenDimensions(800, 600);
@@ -1218,6 +1191,8 @@ void Client::InterfazChat() {
 
 
 }
+
+//Enviamos a los jugadores que tienen que cambiar los turnos
 void Client::SendPasarTurno() {
 	sf::Packet packet;
 	for (auto it : clients) {
@@ -1235,6 +1210,8 @@ void Client::SendPasarTurno() {
 	}
 
 }
+
+//Elige la carta que cambiar
 void Client::ChooseCard() {
 	do
 	{
@@ -1263,10 +1240,10 @@ void Client::ChooseCard() {
 		//Sleep(3000);
 
 		ChangeCardsBetweenPlayers(idPlayer, player2Steal, cultura, familia);
-		CheckFinish();
 		SendCambioCarta(idPlayer, player2Steal, cultura, familia);
 		ManageGame();
-	
+		CheckFinish();
+
 	
 	
 	}
@@ -1277,57 +1254,14 @@ void Client::ChooseCard() {
 		//SendCambioCarta(idPlayer, player2Steal, cultura, familia);
 		PasarTurno();
 		SendPasarTurno();
+		CheckFinish();
 		//ManageGame();
 
 	}
 
 }
 
-void Client::GetConnectedPlayers() {
-	sf::Packet packet;
-	status->SetStatus(tcpSocket->Receive(packet));
 
-	if (status->GetStatus() != sf::Socket::Done)
-	{
-		std::cout << "Error al recibir el paquete\n";
-	}
-	else {
-		std::cout << "Se ha recibido un paquete\n";
-		std::string stringTag;
-		packet >> stringTag;
-		LISTENER tag = StringToEnum(stringTag);
-		if (tag == LISTENER::ENVIAR_CLIENTESACTUALES) {
-			std::string numOfPlayers;
-			int auxiliarNumOfPlayers;
-			packet >> numOfPlayers;
-			auxiliarNumOfPlayers = std::stoi(numOfPlayers);
-			std::string stringPort;
-			int port;
-			for (int i = 0;i < auxiliarNumOfPlayers;i++) {
-
-				packet >> stringPort;
-				port = std::stoi(stringPort);
-				TCPSocket* client = new TCPSocket;
-
-				status->SetStatus(client->Connect("localhost", port, sf::milliseconds(15.f)));
-				if (status->GetStatus() == sf::Socket::Done) {
-					client->SetID(i);
-					std::cout << "Se ha conectado con el cliente " << port << std::endl;
-					clients.push_back(client);
-					selector->Add(client->GetSocket());
-				}
-				else {
-					std::cout << "Error al conectarse con el jugador" << std::endl;
-					delete client;
-				}
-
-			}
-			idPlayer = auxiliarNumOfPlayers;
-
-
-		}
-	}
-}
 //Aqui nos conectamos al bss y tambien abrimos el listener
 void Client::ConnectServer() {
 	status->SetStatus(tcpSocket->Connect("localhost", 50000, sf::milliseconds(15.f)));
@@ -1352,6 +1286,7 @@ void Client::ConnectServer() {
 	}
 }
 
+//Comprobamos las cartas
 bool Client::CheckCard(int _id, CULTURA _cultura, MIEMBRO_FAMILIA _familia) {
 	Card* card = new Card(_cultura, _familia);
 	return playerCards[_id]->checkCard(*card);
@@ -1387,6 +1322,7 @@ void Client::ManageGame() {
 
 			isYourTurn = true;
 			system("cls");
+			std::cout << "          " << idPlayer << " - JUGANDO           ";
 
 			std::cout << "Estas son tus cartas: " << std::endl;
 			
@@ -1399,7 +1335,8 @@ void Client::ManageGame() {
 		system("cls");
 		if (playerCards[idPlayer]->isPlaying) {
 			LineCout();
-			std::cout << "          ESPERANDO TURNO           ";
+
+			std::cout << "          "<<   idPlayer<<" - ESPERANDO TURNO           ";
 			LineCout();
 			std::cout << "Tu puntuacion" << playerCards[idPlayer]->puntuacion<<std::endl;
 			std::cout << "Esta jugando el jugador: " << playerCards[idPlayer]->actualTurn << std::endl;
@@ -1421,10 +1358,11 @@ void Client::ManageGame() {
 		
 	}
 }
+
 void Client::TimerTurn() {
 	while (true) {
 		if (isYourTurn) {
-			std::cout << timer->GetDuration() << "/" << TURN_DURATION << std::endl;
+			std::cout << std::endl<< "Tiempo: ("<<timer->GetDuration() << "/" << TURN_DURATION <<")"<< std::endl;
 			
 		}
 		if (timer->GetDuration() > TURN_DURATION) {
@@ -1459,6 +1397,7 @@ void Client::ClientLoop()
 		}
 	}
 }
+
 std::string Client::EnumToString(LISTENER _listener) {
 	if (_listener == ENVIAR_CLIENTESACTUALES) {
 		return "ENVIAR_CLIENTESACTUALES";
