@@ -1,4 +1,5 @@
 #include "Client.h"
+#include <Timer.cpp>
 
 Client::Client()
 {
@@ -6,7 +7,7 @@ Client::Client()
 	listener = new TCPListener();
 	selector = new TCPSocketSelector();
 	status = new TCPStatus();
-
+	timer = new Timer();
 }
 
 Client::~Client()
@@ -304,6 +305,8 @@ void Client::AsignTurns()
 	}
 	std::thread chat(&Client::InterfazChat, this);
 	chat.detach();
+	std::thread timer(&Client::TimerTurn, this);
+	timer.detach();
 }
 
 void Client::Waiting4Players() {
@@ -473,6 +476,13 @@ void Client::ManageMessage(sf::Packet& packet) {
 	packet >> message;
 	aMensajes.push_back(message);
 }
+void Client::ManageFinish(sf::Packet& packet) {
+	std::string id, points;
+	packet >> id;
+	packet >> points;
+	std::cout << "El jugador " << id << " ha ganado con " << points << std::endl;
+	gameBegin = false;
+}
 void Client::ClientsListener() {
 	while (true) {
 		for (auto it : clients) {
@@ -497,6 +507,10 @@ void Client::ClientsListener() {
 							break;
 						case MESSAGE:
 							ManageMessage(packet);
+							break;
+						case FINISH:
+							ManageFinish(packet);
+							break;
 						}
 
 
@@ -517,7 +531,78 @@ void Client::ClientsListener() {
 		}
 	}
 }
+void Client::CheckFinish() {
+	int playersPlaying = 0;
+	int cultureCompleted = 0;
+	for (auto it : playerCards) {
+		if (it.second->isPlaying) {
+			playersPlaying++;
+		}
+		cultureCompleted += it.second->puntuacion;
+	}
+	if (playersPlaying <= 2) {
+		std::cout << "Solo quedan dos jugadores" << std::endl;
+		std::cout << "El ganador es: ";
+		int _id =0;
+		int winnerPoints =0;
+		for (auto it : playerCards) {
+			if (it.second->puntuacion > winnerPoints) {
+				_id = it.first;
+				winnerPoints = it.second->puntuacion;
+			}
+		}
+		std::cout << _id << " con " << winnerPoints << " puntos.";
+		sf::Packet packet;
+		for (auto it : clients) {
 
+			packet << EnumToString(LISTENER::FINISH);
+			packet << std::to_string(_id);
+			packet << std::to_string(winnerPoints);
+			status->SetStatus(it->Send(packet));
+			if (status->GetStatus() == sf::Socket::Done)
+			{
+				std::cout << "El paquete se ha enviado correctamente\n";
+				packet.clear();
+			}
+			else {
+				std::cout << "El paquete no se ha podido enviar\n";
+			}
+		}
+		gameBegin = false;
+		Sleep(7000);
+	}
+	else if (cultureCompleted == 7) {
+		std::cout << "Se han completado todas las familias." << std::endl;
+		std::cout << "El ganador es: ";
+		int _id = 0;
+		int winnerPoints = 0;
+		for (auto it : playerCards) {
+			if (it.second->puntuacion > winnerPoints) {
+				_id = it.first;
+				winnerPoints = it.second->puntuacion;
+			}
+		}
+		std::cout << _id << " con " << winnerPoints << " puntos.";
+		sf::Packet packet;
+		for (auto it : clients) {
+
+			packet << EnumToString(LISTENER::FINISH);
+			packet << std::to_string(_id);
+			packet << std::to_string(winnerPoints);
+			status->SetStatus(it->Send(packet));
+			if (status->GetStatus() == sf::Socket::Done)
+			{
+				std::cout << "El paquete se ha enviado correctamente\n";
+				packet.clear();
+			}
+			else {
+				std::cout << "El paquete no se ha podido enviar\n";
+			}
+		}
+		gameBegin = false;
+		Sleep(7000);
+	}
+}
 void Client::ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CULTURA _culture, MIEMBRO_FAMILIA _familia) {
 	Card* card = new Card(_culture, _familia);
 	playerCards[_actualPlayer]->giveCard(*card);
@@ -528,16 +613,21 @@ void Client::ChangeCardsBetweenPlayers(int _actualPlayer, int _changePlayer, CUL
 
 
 void Client::PasarTurno() {
-	int actualTurn = playerCards[idPlayer]->actualTurn;
+	int actualTurn = 0;
 
-	for (int i = 0; i < playerCards.size();i++) {
-		if (actualTurn == tamañoSala-1) {
-			playerCards[i]->actualTurn = 0;
+	for(auto it : playerCards){
+		actualTurn = it.second->actualTurn;
+		if (actualTurn == tamañoSala - 1) {
+			it.second->actualTurn = 0;
+			actualTurn = 0;
 		}
+
 		else {
-			playerCards[i]->actualTurn = playerCards[i]->actualTurn + 1;
+			it.second->actualTurn = it.second->actualTurn + 1;
+				actualTurn = it.second->actualTurn + 1;
+			}
 		}
-	}
+	 
 }
 
 void Client::InterfazChat() {
@@ -1168,9 +1258,12 @@ void Client::ChooseCard() {
 		familia = (MIEMBRO_FAMILIA)auxFamilia;
 
 	} while (auxFamilia > 5);
-	if (CheckCard(player2Steal, cultura, familia)) {
+	if (CheckCard(player2Steal, cultura, familia)&&isYourTurn) {
 		std::cout << "El jugador tiene la carta";
+		//Sleep(3000);
+
 		ChangeCardsBetweenPlayers(idPlayer, player2Steal, cultura, familia);
+		CheckFinish();
 		SendCambioCarta(idPlayer, player2Steal, cultura, familia);
 		ManageGame();
 	
@@ -1178,11 +1271,13 @@ void Client::ChooseCard() {
 	
 	}
 	else {
-		std::cout << "El jugador no tiene la carta";
+		std::cout << "El jugador no tiene la carta o se te ha acabado el tiempo";
+		isYourTurn = false;
+		Sleep(3000);
 		//SendCambioCarta(idPlayer, player2Steal, cultura, familia);
 		PasarTurno();
 		SendPasarTurno();
-		ManageGame();
+		//ManageGame();
 
 	}
 
@@ -1284,9 +1379,13 @@ void Client::SendCambioCarta(int _id,int playerToChange, CULTURA _cultura, MIEMB
 }
 
 void Client::ManageGame() {
-	if (idPlayer == playerCards[0]->actualTurn)
+
+	if (idPlayer == playerCards[idPlayer]->actualTurn)
 	{
 		if (playerCards[idPlayer]->isPlaying) {
+			timer->ResetTimer();
+
+			isYourTurn = true;
 			system("cls");
 
 			std::cout << "Estas son tus cartas: " << std::endl;
@@ -1298,16 +1397,43 @@ void Client::ManageGame() {
 	}
 	else {
 		system("cls");
+		if (playerCards[idPlayer]->isPlaying) {
+			LineCout();
+			std::cout << "          ESPERANDO TURNO           ";
+			LineCout();
+			std::cout << "Tu puntuacion" << playerCards[idPlayer]->puntuacion<<std::endl;
+			std::cout << "Esta jugando el jugador: " << playerCards[idPlayer]->actualTurn << std::endl;
+			playerCards[idPlayer]->PrintHand();
 
-		LineCout();
-		std::cout << "          MODO ESPECTADOR           ";
-		LineCout();
-		std::cout << "Esta jugando el jugador: " << playerCards[idPlayer]->actualTurn << std::endl;
-	
-		Sleep(7000);
+			Sleep(7000);
+		}
+		else {
+			LineCout();
+			std::cout << "          HAS PERDIDO: MODO ESPECTADOR           ";
+			LineCout();
+			std::cout << "Esta jugando el jugador: " << playerCards[idPlayer]->actualTurn << std::endl;
+			//playerCards[idPlayer]->PrintHand();
+			if (playerCards[0]->actualTurn == idPlayer) {
+				PasarTurno();
+				SendPasarTurno();
+			}
+		}
+		
 	}
 }
+void Client::TimerTurn() {
+	while (true) {
+		if (isYourTurn) {
+			std::cout << timer->GetDuration() << "/" << TURN_DURATION << std::endl;
+			
+		}
+		if (timer->GetDuration() > TURN_DURATION) {
+			isYourTurn = false;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
+	}
+}
 
 void Client::ClientLoop()
 {
@@ -1373,6 +1499,10 @@ std::string Client::EnumToString(LISTENER _listener) {
 		return "MESSAGE";
 
 	}
+	else if (_listener == FINISH) {
+		return "FINISH";
+
+	}
 }
 LISTENER Client::StringToEnum(std::string _string) {
 	if (_string == "ENVIAR_CLIENTESACTUALES") {
@@ -1404,6 +1534,9 @@ LISTENER Client::StringToEnum(std::string _string) {
 	}
 	else if (_string == "MESSAGE") {
 		return LISTENER::MESSAGE;
+	}
+	else if (_string == "FINISH") {
+		return LISTENER::FINISH;
 	}
 }
 

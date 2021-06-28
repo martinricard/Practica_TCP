@@ -7,6 +7,7 @@ struct PlayerCards {
 	int isPlaying;
 	int actualTurn;
 	int numOfCards;
+	int puntuacion;
 	std::vector<Card>playerCards;
 
 	bool hasCardInPlayerCards(Card _card) {
@@ -19,9 +20,36 @@ struct PlayerCards {
 		}
 	}
 
+	bool checkCulture(Card _card) {
+		int numOfCulture = 0;
+		for (auto it : playerCards) {
+			if (it.cultura == _card.cultura) {
+				numOfCulture++;
+				if (numOfCulture == 6) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+
 	void giveCard(Card _card) {
 		numOfCards++;
 		playerCards.push_back(_card);
+		if (checkCulture(_card)) {
+			puntuacion++;
+			int numOfCulture = 6;
+			while (numOfCulture != 0) {
+				for (auto it : playerCards) {
+					if (it.cultura == _card.cultura) {
+						eraseCard(it);
+						numOfCulture--;
+						break;
+					}
+				}
+			}
+		}
 	}
 
 	bool checkCard(Card _card) {

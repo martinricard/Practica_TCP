@@ -28,7 +28,7 @@ struct Client
 	
 	bool playerReady = false;
 	std::vector<std::string> aMensajes;
-
+	Timer * timer;
 	bool game = false;
 	std::mutex clientMutex;
 	bool gameBegin = false;
@@ -39,6 +39,8 @@ struct Client
 	bool waitingAnswer1, waitingAnswer2, waitingAnswer3;
 	CULTURA cultura;
 	MIEMBRO_FAMILIA familia;
+
+	bool isYourTurn =false;
 public:
 	
 
@@ -78,7 +80,10 @@ public:
 
 	void SendCambioCarta(int _id, int playerToChange, CULTURA _cultura, MIEMBRO_FAMILIA _familia);
 
+	void TimerTurn();
 
+	void CheckFinish();
+	void ManageFinish(sf::Packet& packet);
 
 
 
